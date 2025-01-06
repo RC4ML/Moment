@@ -171,5 +171,12 @@ If Hyperion and the IO stack are helpful for your research, please cite our work
   year={2025},
   booktitle={ICDE}
 }
+
+@article{sun2023helios,
+  title={Helios: An Efficient Out-of-core GNN Training System on Terabyte-scale Graphs with In-memory Performance},
+  author={Sun, Jie and Sun, Mo and Zhang, Zheng and Xie, Jun and Shi, Zuocheng and Yang, Zihan and Zhang, Jie and Wu, Fei and Wang, Zeke},
+  journal={arXiv preprint arXiv:2310.00837},
+  year={2023}
+}
 ```
 
