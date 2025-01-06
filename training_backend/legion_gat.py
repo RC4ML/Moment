@@ -147,11 +147,11 @@ def worker_process(rank, world_size, args):
 
     feat_len = args.features_num
 
-    heads = [8,1]
+    heads = [8,8]
     model = GAT(in_feats=args.features_num,
                     n_hidden=args.hidden_dim,
                     n_classes=args.class_num,
-                    heads=[8,1],
+                    heads=[8,8],
                     n_layers=args.hops_num,
                     activation=Func.relu,
                     dropout=args.drop_rate).to(cuda_device)
@@ -212,9 +212,9 @@ if __name__ == "__main__":
     cur_path = sys.path[0]
     argparser = argparse.ArgumentParser("Train GNN.")
     argparser.add_argument('--class_num', type=int, default=2)
-    argparser.add_argument('--features_num', type=int, default=128)
+    argparser.add_argument('--features_num', type=int, default=1024)
     argparser.add_argument('--train_batch_size', type=int, default=8000)
-    argparser.add_argument('--hidden_dim', type=int, default=256)
+    argparser.add_argument('--hidden_dim', type=int, default=64)
     argparser.add_argument('--hops_num', type=int, default=2)
     argparser.add_argument('--nbrs_num', type=list, default=[25, 10])
     argparser.add_argument('--drop_rate', type=float, default=0.5)

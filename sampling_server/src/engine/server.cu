@@ -193,7 +193,6 @@ public:
             max_ids_num += max_num_per_hop[i];
         }
         num_ids_ = max_ids_num;
-
         op_num_ = (hop_num + 1) * INTRABATCH_CON + 1;
         op_factory_.resize(op_num_);
         op_factory_[0] = NewBatchGenerateOP(0);
@@ -224,7 +223,7 @@ public:
         memorypool_->SetAggSrcId(agg_src_ids);
         int32_t* agg_dst_ids            = (int32_t*)d_alloc_space(num_ids_ * sizeof(int32_t));
         memorypool_->SetAggDstId(agg_dst_ids);
-        char* tmp_part_ind              = (char*)d_alloc_space(num_ids_ * sizeof(char));
+        int32_t* tmp_part_ind              = (int32_t*)d_alloc_space(num_ids_ * sizeof(int32_t));
         memorypool_->SetTmpPartIdx(tmp_part_ind);
         int32_t* tmp_part_off           = (int32_t*)d_alloc_space(num_ids_ * sizeof(int32_t));
         memorypool_->SetTmpPartOff(tmp_part_off);
@@ -251,7 +250,7 @@ public:
         for(int i = 0; i < op_num_; i++){
             op_params_[i] = new OpParams();
             op_params_[i]->device_id    = local_dev_id_;
-            op_params_[i]->stream       = streams_[0];//= (streams_[i%INTRABATCH_CON]);
+            op_params_[i]->stream       = (streams_[i%INTRABATCH_CON]);
             cudaEventCreate(&events_[i]);
             op_params_[i]->event        = (events_[i]);
             op_params_[i]->memorypool   = memorypool_;
@@ -271,6 +270,8 @@ public:
     void InitializeFeaturesBuffer(RunnerParams* params) override {
         UnifiedCache* cache     = (UnifiedCache*)(params->cache);
         int32_t num_ids         = int32_t((cache->MaxIdNum(local_dev_id_)) * 1.2);
+        std::cout<<"vertex per epoch: "<<int(num_ids/1.2)<<"\n";
+        // num_ids = num_ids / 151;
         IPCEnv* env             = (IPCEnv*)(params->env);
         env->InitializeFeaturesBuffer(0, num_ids, float_feature_len_, local_dev_id_, interbatch_concurrency_);
         for(int i = 0; i < interbatch_concurrency_; i++){
@@ -299,7 +300,7 @@ public:
         cudaSetDevice(local_dev_id_);
         IPCEnv* env = (IPCEnv*)(params->env);
         int32_t batch_id = params->global_batch_id;
-        if(batch_id % 1000 == 0){
+        if(batch_id % 10 == 0){
             std::cout<<"batch id: "<<batch_id<<"\n";
         }
         mode_ = env->GetCurrentMode(batch_id);
@@ -309,7 +310,7 @@ public:
         
         for(int i = 0; i < op_num_; i++){
             if(i % INTRABATCH_CON >= 1){
-                cudaStreamWaitEvent(streams_[0], events_[i / INTRABATCH_CON * INTRABATCH_CON], 0);
+                cudaStreamWaitEvent(streams_[i % INTRABATCH_CON], events_[i / INTRABATCH_CON * INTRABATCH_CON], 0);
             }
             op_params_[i]->is_presc = false;
             op_factory_[i]->run(op_params_[i]);

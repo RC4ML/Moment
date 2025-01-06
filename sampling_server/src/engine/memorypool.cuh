@@ -93,7 +93,7 @@ public:
         return temp_storage_;
     }
 
-    char* GetTmpPartIdx(){
+    int32_t* GetTmpPartIdx(){
         return tmp_part_ind_;
     }
 
@@ -162,7 +162,7 @@ public:
         temp_storage_ = temp_storage;
     }
 
-    void SetTmpPartIdx(char* tmp_part_ind){
+    void SetTmpPartIdx(int32_t* tmp_part_ind){
         tmp_part_ind_ = tmp_part_ind;
     }
 
@@ -206,7 +206,7 @@ private:
     int32_t* tmp_src_of_;
     int32_t* tmp_dst_of_;
     void* temp_storage_;
-    char* tmp_part_ind_;
+    int32_t* tmp_part_ind_;
     int32_t* tmp_part_off_;
 
     int32_t pipeline_depth_;

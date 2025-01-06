@@ -112,7 +112,7 @@ def test_one_step(model, metric, device, feat_len):
     blocks.append(create_dgl_block(block1_agg_src, block1_agg_dst, block1_src_num, block1_dst_num))
     blocks.append(create_dgl_block(block2_agg_src, block2_agg_dst, block2_src_num, block2_dst_num))
     batch_pred = model(blocks, features)
-    long_labels = torch.as_tensor(labels, dtype=torch.long, device=device)
+    long_labels = torch.as_tensor(labels, dtype=torch.long, device=device)*0
     batch_pred = torch.softmax(batch_pred, dim=1).to(device)
     acc = metric(batch_pred, long_labels)
     ipc_service.synchronize()
@@ -195,7 +195,7 @@ if __name__ == "__main__":
     cur_path = sys.path[0]
     argparser = argparse.ArgumentParser("Train GNN.")
     argparser.add_argument('--class_num', type=int, default=2)
-    argparser.add_argument('--features_num', type=int, default=128)
+    argparser.add_argument('--features_num', type=int, default=512)
     argparser.add_argument('--train_batch_size', type=int, default=8000)
     argparser.add_argument('--hidden_dim', type=int, default=256)
     argparser.add_argument('--hops_num', type=int, default=2)

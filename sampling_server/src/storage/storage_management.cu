@@ -89,6 +89,15 @@ void StorageManagement::ReadMetaFIle(BuildInfo* info){
     std::cout<<"CPU Cache Capacity: "<<cpu_cache_capacity_<<"\n";
     iss >> gpu_cache_capacity_;
     std::cout<<"GPU Cache Capacity: "<<gpu_cache_capacity_<<"\n";
+    iss >> cpu_topo_size_;
+    std::cout<<"CPU Topo Capacity: "<<cpu_topo_size_<<"\n";
+    iss >> gpu_topo_size_;
+    std::cout<<"GPU Topo Capacity: "<<gpu_topo_size_<<"\n";
+    iss >> cpu_feat_size_;
+    std::cout<<"CPU Feat Capacity: "<<cpu_feat_size_<<"\n";
+    iss >> gpu_feat_size_;
+    std::cout<<"GPU Feat Capacity: "<<gpu_feat_size_<<"\n";
+
 
 
     info->cudaDevice = 0;
@@ -166,8 +175,8 @@ void StorageManagement::LoadFeature(BuildInfo* info){
     // std::string training_path = dataset_path_  + "train_ids";
     // std::string validation_path = dataset_path_  + "valid_ids";
     // std::string testing_path = dataset_path_  + "test_ids";
-    // std::string features_path = dataset_path_ + "features";
-    // std::string labels_path = dataset_path_ + "labels";
+    std::string features_path = dataset_path_ + "features";
+    std::string labels_path = dataset_path_ + "labels";
     // std::string labels_path = dataset_path_ + "labels_raw";
 
 
@@ -326,7 +335,7 @@ void StorageManagement::Initialze(int32_t shard_count){
     int32_t train_step = env_->GetTrainStep();
 
     cudaSetDevice(0);
-    cache_ -> Initialize(cache_memory_, float_feature_len_, train_step, shard_count, cpu_cache_capacity_, gpu_cache_capacity_);
+    cache_ -> Initialize(cache_memory_, float_feature_len_, train_step, shard_count, cpu_cache_capacity_, gpu_cache_capacity_, cpu_topo_size_, gpu_topo_size_, cpu_feat_size_, gpu_feat_size_);
     cudaSetDevice(0);
     std::cout<<"Storage Initialized\n";
 }

@@ -44,7 +44,7 @@
 #include "system_config.cuh"
 
 using pair_type = bght::pair<int32_t, int32_t>;
-using index_pair_type = bght::pair<int32_t, char>;
+using index_pair_type = bght::pair<int32_t, int32_t>;
 using offset_pair_type = bght::pair<int32_t, int32_t>;
 
 // Macro for checking cuda errors following a cuda launch or api call
@@ -64,7 +64,7 @@ __global__ void GetEdgeMem(int32_t* edge_order, uint64_t* edge_mem, int32_t tota
     for(int32_t thread_idx = threadIdx.x + blockDim.x * blockIdx.x; thread_idx < total_num_nodes; thread_idx += gridDim.x * blockDim.x){
         int32_t id = edge_order[thread_idx];
         int64_t neighbor_count = csr_index[id + 1]- csr_index[id];
-        edge_mem[thread_idx] = (sizeof(int64_t) + sizeof(int32_t) * neighbor_count);
+        edge_mem[thread_idx] = (sizeof(int64_t) + sizeof(int64_t) * neighbor_count);
     }
 }
 
@@ -114,16 +114,42 @@ __global__ void HybridInitPair(pair_type* pair, int32_t* QF, int32_t cpu_cache_c
     for(int32_t thread_idx = threadIdx.x + blockDim.x * blockIdx.x; thread_idx < (cpu_cache_capacity + gpu_cache_capacity); thread_idx += gridDim.x * blockDim.x){
         if(thread_idx < gpu_cache_capacity){
             pair[thread_idx].first = QF[thread_idx];
-            pair[thread_idx].second = cpu_cache_capacity + thread_idx;
+            pair[thread_idx].second = thread_idx;
         }else{
             pair[thread_idx].first = QF[thread_idx];
+            pair[thread_idx].second = thread_idx;
+        }
+    }
+}
+
+
+__global__ void HybridInitIndexPair(index_pair_type* pair, int32_t* QT, int32_t cpu_cache_capacity, int32_t gpu_cache_capacity){
+    for(int32_t thread_idx = threadIdx.x + blockDim.x * blockIdx.x; thread_idx < (cpu_cache_capacity + gpu_cache_capacity); thread_idx += gridDim.x * blockDim.x){
+        if(thread_idx < gpu_cache_capacity){
+            pair[thread_idx].first = QT[thread_idx];
+            pair[thread_idx].second = 0;
+        }else{
+            pair[thread_idx].first = QT[thread_idx];
+            pair[thread_idx].second = -1;
+        }
+    }
+}
+
+__global__ void HybridInitOffsetPair(offset_pair_type* pair, int32_t* QT, int32_t cpu_cache_capacity, int32_t gpu_cache_capacity){
+    for(int32_t thread_idx = threadIdx.x + blockDim.x * blockIdx.x; thread_idx < (cpu_cache_capacity + gpu_cache_capacity); thread_idx += gridDim.x * blockDim.x){
+        if(thread_idx < gpu_cache_capacity){
+            pair[thread_idx].first = QT[thread_idx];
+            pair[thread_idx].second = thread_idx;
+        }else{
+            pair[thread_idx].first = QT[thread_idx];
             pair[thread_idx].second = thread_idx - gpu_cache_capacity;
         }
     }
 }
 
 
-__global__ void topo_cache_hit(char* partition_index, int32_t batch_size, int32_t* global_count){
+
+__global__ void topo_cache_hit(int32_t* partition_index, int32_t batch_size, int32_t* global_count){
     __shared__ int32_t local_count[1];
     if(threadIdx.x == 0){
         local_count[0] = 0;
@@ -222,12 +248,12 @@ __global__ void feat_cache_lookup(
             int32_t foffset;
             gidx = (cache_index[thread_idx / float_feature_len]);
 			foffset = thread_idx % float_feature_len;
-			if(gidx < cpu_cache_capacity && gidx >= 0){/*cache in cpu*/
-				fidx = gidx % cpu_cache_capacity;//sampled_ids[node_off + (thread_idx / float_feature_len)];
+			if(gidx > gpu_cache_capacity ){/*cache in cpu*/
+				fidx = gidx - gpu_cache_capacity;//sampled_ids[node_off + (thread_idx / float_feature_len)];
 				dst_float_buffer[int64_t(int64_t((int64_t(node_off) * float_feature_len)) + thread_idx)] = cpu_float_feature[int64_t(int64_t(int64_t(fidx) * float_feature_len) + foffset)];
-			}else if(gidx >= cpu_cache_capacity){/*cache in gpu*/
+			}else if(gidx <= gpu_cache_capacity && gidx >= 0){/*cache in gpu*/
                 // didx = (gidx - cpu_cache_capacity) / gpu_cache_capacity;//device idx in clique
-                fidx = (gidx - cpu_cache_capacity) % gpu_cache_capacity;
+                fidx = (gidx) % gpu_cache_capacity;
 				dst_float_buffer[int64_t(int64_t((int64_t(node_off) * float_feature_len)) + thread_idx)] = gpu_float_feature[int64_t(int64_t(int64_t(fidx) * float_feature_len) + foffset)];
 			}
 		}

@@ -194,6 +194,7 @@ std::vector<torch::Tensor> cuda_get_next(
     cudaMemcpy(h_node_counter, node_counter, 16 * sizeof(int32_t), cudaMemcpyDeviceToHost);
     cudaMemcpy(h_edge_counter, edge_counter, 16 * sizeof(int32_t), cudaMemcpyDeviceToHost);
     int hop_num = h_node_counter[INTRABATCH_CON * 3 - 1];
+    // std::cout<<"hop num "<<hop_num<<"\n";
 
     std::vector<torch::Tensor> ret;
 

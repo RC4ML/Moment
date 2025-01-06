@@ -225,14 +225,14 @@ if __name__ == "__main__":
     cur_path = sys.path[0]
     argparser = argparse.ArgumentParser("Train GNN.")
     argparser.add_argument('--class_num', type=int, default=2)
-    argparser.add_argument('--features_num', type=int, default=1024)
+    argparser.add_argument('--features_num', type=int, default=512)
     argparser.add_argument('--train_batch_size', type=int, default=8000)
     argparser.add_argument('--hidden_dim', type=int, default=256)
     argparser.add_argument('--hops_num', type=int, default=2)
     argparser.add_argument('--nbrs_num', type=list, default=[25, 10])
     argparser.add_argument('--drop_rate', type=float, default=0.5)
     argparser.add_argument('--learning_rate', type=float, default=0.003)
-    argparser.add_argument('--epoch', type=int, default=100)
+    argparser.add_argument('--epoch', type=int, default=2)
     argparser.add_argument('--gpu_num', type=int, default=1)
     args = argparser.parse_args()
 

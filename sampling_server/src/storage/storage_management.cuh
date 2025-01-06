@@ -58,7 +58,10 @@ private:
   int32_t num_queues_per_ssd_;
   int32_t cpu_cache_capacity_;//for legion ssd
   int32_t gpu_cache_capacity_;//for legion ssd
-  
+  int64_t cpu_topo_size_;
+  int64_t gpu_topo_size_;
+  int64_t cpu_feat_size_;
+  int64_t gpu_feat_size_;
   GraphStorage* graph_;
   FeatureStorage* feature_;
   UnifiedCache* cache_;

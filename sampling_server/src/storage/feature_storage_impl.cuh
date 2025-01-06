@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "iostack.cuh"
-#include "iomerge.cuh"
+#include "userqueue.cuh"
 
 // Macro for checking cuda errors following a cuda launch or api call
 #define cudaCheckError()                                       \
