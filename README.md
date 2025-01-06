@@ -101,7 +101,7 @@ Each IO request needs to be organized in the following structure. `start_lb` rep
 struct IOReq
 {
     uint64_t start_lb;
-    app_addr_t dest_addr[MAX_ITEMS];
+    uint64_t dest_addr[MAX_ITEMS];
     int num_items;
     ...
 };
