@@ -71,10 +71,11 @@ $ sudo make unload
 ```
 ## 2. Standalone Usage of GPU-Initiated Asynchronous Disk IO Stack
 GPU-initiated asynchronous disk IO stack is the key component of Hyperion, maximizing the throughput of GPU-initiated direct disk access with only a few GPU cores.
+Traditional (synchronous) GPU-initiated IO stack design requires collocating IO submission and IO completion within the same thread/warp, leading to interference between them. As a result, GPU needs to launch a massive number of threads/warps to maximize the IO submission throughput. In contrast, we propose an asynchronous design, which decouples IO submission with IO completion. With the asynchronous design, we can only launch about 1% of GPU cores to saturate SSDs while wasting no GPU cores for other computation kernels between IO submission and completion.
 
 You can try to integrate it into your own AI system.
 
-<img src="https://github.com/user-attachments/assets/894134f3-c0be-46da-b43d-f0ddd709f604" alt="IO Stack Figure" style="width:50%; height:auto;">
+<img src="https://github.com/user-attachments/assets/5914271d-0592-4c9a-a57b-a5fe8efe3cb5" alt="IO Stack Figure" style="width:50%; height:auto;">
 
 ### Quick Start
 ```
@@ -83,7 +84,7 @@ $ make
 $ sudo ./test
 ```
 ### User Interface
-In this part, we introduce the usage of the IO stack. The code of the IO stack is head-only and can be easily integrated into your projects. We regard NVMe SSDs as block-device, i.e., users should know which SSD logic blocks to access. We define `ITEM_SIZE` as the minimal logic block size. `ITEM_SIZE` is usually 512 bytes. `NUM_LBS_PER_SSD` is the total number of logic blocks in each SSD.
+In this part, we introduce the usage of the IO stack. The code of the IO stack is head-only and can be easily integrated into your projects. We regard NVMe SSDs as block-device, i.e., users should know which SSD logic blocks to access. We define `LBS` as the minimal logic block size. `LBS` is usually 512 bytes. `NUM_LBS_PER_SSD` is the total number of logic blocks in each SSD.
 #### Initialize IO stack
 Initialize the IO stack with configurable parameters. `num_ssds` is the total number of SSDs and `num_queue_per_ssd` is the SQ/CQ number of each SSD. `io_submission_TB_num` and `io_completion_TB_num` are the thread block number of IO submission kernels and IO completion kernels, respectively. In our evaluated platforms, setting `io_submission_TB_num` to **1** and setting `io_completion_TB_num` to **32** is sufficient to maximize SSD throughput (even for 12 * SSDs).
 ```cpp
