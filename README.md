@@ -122,6 +122,7 @@ io_submission(reqs_micro_batch3, num_reqs_batch3, stream1);
 GNN_Kernel(..., stream2) ## GNN computation
 io_completion(stream1);
 ```
+Refer to test.cu for more details.
 ## 3. Prepare Datasets for GNN Training
 Datasets are from OGB (https://ogb.stanford.edu/), Standford-snap (https://snap.stanford.edu/), and Webgraph (https://webgraph.di.unimi.it/).
 Here is an example of preparing datasets for Hyperion.
