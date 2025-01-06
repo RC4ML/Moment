@@ -60,7 +60,8 @@ void IOComplete(
   UnifiedCache*   cache, 
   MemoryPool*     memorypool,
   int32_t         dev_id,
-  int32_t         mode
+  int32_t         mode,
+  bool    			  is_presc
 );
 
 #endif

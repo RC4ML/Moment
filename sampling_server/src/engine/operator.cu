@@ -116,8 +116,8 @@ public:
         MemoryPool* memorypool      = (MemoryPool*)(params->memorypool);
         int mode                    = memorypool->GetCurrentMode();
         int32_t device_id           = params->device_id;
-
-        IOComplete(params->stream, feature, cache, memorypool, device_id, mode);
+        bool is_presc               = params->is_presc;
+        IOComplete(params->stream, feature, cache, memorypool, device_id, mode, is_presc);
         cudaEventRecord(((params->event)), ((params->stream)));
         cudaCheckError();
     }

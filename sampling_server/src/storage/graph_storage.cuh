@@ -9,7 +9,6 @@ public:
     virtual ~GraphStorage() = default;
     //build
     virtual void Build(BuildInfo* info) = 0;
-    virtual void GraphCache(int32_t* QT, int32_t Ki, int32_t Kg, int32_t capacity) = 0;
     virtual void HyrbidGraphCache(int32_t* QT, int32_t cpu_capacity, int32_t gpu_capacity) = 0;
     virtual void Finalize() = 0;
     //CSR

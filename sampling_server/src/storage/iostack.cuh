@@ -256,8 +256,12 @@ __global__ static void count_io_req_per_SSD(IOReq *reqs, int* num_reqs, int num_
 __global__ static void count_req_prefix_sum(int num_ssds, int num_queues_per_ssd, int* ssd_num_reqs, int* ssd_num_reqs_prefix_sum)
 {
     for (int i = 0; i < num_ssds; i++)
-    {
-        assert(ssd_num_reqs[i] <= num_queues_per_ssd * (QUEUE_DEPTH - 1) && ssd_num_reqs[i] > 0);
+    {   
+        if (ssd_num_reqs[i] > num_queues_per_ssd * (QUEUE_DEPTH - 1) || ssd_num_reqs[i] <= 0){
+            printf("%d %d\n", i, ssd_num_reqs[i]);
+            assert(0);
+        }
+        // assert(ssd_num_reqs[i] <= num_queues_per_ssd * (QUEUE_DEPTH - 1) && ssd_num_reqs[i] > 0);
 
         ssd_num_reqs_prefix_sum[i] = ssd_num_reqs[i];
         if (i > 0)

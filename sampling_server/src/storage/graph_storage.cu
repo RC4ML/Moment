@@ -71,45 +71,6 @@ public:
         csr_dst_node_ids_cpu_ = pin_csr_dst_node_ids;
         
     }
-    
-
-    void GraphCache(int32_t* QT, int32_t Ki, int32_t Kg, int32_t capacity){
-        cudaMemcpy(csr_node_index_[Ki * Kg], csr_node_index_[0], (partition_count_ + 1) * sizeof(int64_t*), cudaMemcpyDeviceToDevice);
-        cudaCheckError();
-        cudaMemcpy(csr_dst_node_ids_[Ki * Kg], csr_dst_node_ids_[0], (partition_count_ + 1) * sizeof(int32_t*), cudaMemcpyDeviceToDevice);
-        cudaCheckError();
-        for(int32_t i = 0; i < Kg; i++){
-            cudaSetDevice(Ki * Kg + i);
-            int64_t* neighbor_count;
-            cudaMalloc(&neighbor_count, capacity * sizeof(int64_t));
-            GetNeighborCount<<<80, 1024>>>(QT, Kg, i, capacity, csr_node_index_cpu_, neighbor_count);
-
-            int64_t* d_csr_node_index;
-            cudaMalloc(&d_csr_node_index, (int64_t(capacity + 1)*sizeof(int64_t)));
-            cudaMemset(d_csr_node_index, 0, (int64_t(capacity + 1)*sizeof(int64_t)));
-            thrust::inclusive_scan(thrust::device, neighbor_count, neighbor_count + capacity, d_csr_node_index + 1);
-            cudaCheckError();
-            int64_t* h_csr_node_index = (int64_t*)malloc((capacity + 1) * sizeof(int64_t));
-            cudaMemcpy(h_csr_node_index, d_csr_node_index, (capacity + 1) * sizeof(int64_t), cudaMemcpyDeviceToHost);
-            
-            int32_t* d_csr_dst_node_ids;
-            cudaMalloc(&d_csr_dst_node_ids, int64_t(int64_t(h_csr_node_index[capacity]) * sizeof(int32_t)));
-
-            TopoFillUp<<<80, 1024>>>(QT, Kg, i, capacity, csr_node_index_cpu_, csr_dst_node_ids_cpu_, d_csr_node_index, d_csr_dst_node_ids);
-            cudaCheckError();
-    
-            assign_memory<<<1,1>>>(csr_dst_node_ids_[Ki * Kg], d_csr_dst_node_ids, csr_node_index_[Ki * Kg], d_csr_node_index, Ki * Kg + i);
-            cudaCheckError();
-            cudaFree(neighbor_count);
-        }
-        for(int32_t i = 1; i < Kg; i++){
-            cudaMemcpy(csr_node_index_[Ki * Kg + i], csr_node_index_[Ki * Kg], (partition_count_ + 1) * sizeof(int64_t*), cudaMemcpyDeviceToDevice);
-            cudaCheckError();
-            cudaMemcpy(csr_dst_node_ids_[Ki * Kg + i], csr_dst_node_ids_[Ki * Kg], (partition_count_ + 1) * sizeof(int32_t*), cudaMemcpyDeviceToDevice);
-            cudaCheckError();
-        }
-    }
-
 
     void HyrbidGraphCache(int32_t* QT, int32_t cpu_capacity, int32_t gpu_capacity){
             int64_t* neighbor_count;
@@ -147,7 +108,6 @@ public:
                 cudaCheckError();
                 assign_memory<<<1,1>>>(csr_dst_node_ids_[0], pin_csr_dst_node_ids, csr_node_index_[0], pin_csr_node_index, 1);
             }
-
             
             cudaCheckError();
             cudaFree(neighbor_count);
@@ -156,10 +116,6 @@ public:
     void Finalize() override {
         cudaFreeHost(csr_node_index_cpu_);
         cudaFreeHost(csr_dst_node_ids_cpu_);
-        // for(int32_t i = 0; i < partition_count_; i++){
-        //     cudaFree(partition_index_[i]);
-        //     cudaFree(partition_offset_[i]);
-        // }
     }
 
     //CSR

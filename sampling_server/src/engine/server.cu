@@ -45,7 +45,7 @@ class GPUServer : public Server {
 public:
     void Initialize(int global_shard_count, std::vector<int> fanout) {
         shard_count_ = global_shard_count;
-        std::cout<<"CUDA Device Count: "<<shard_count_<<"\n";
+        // std::cout<<"CUDA Device Count: "<<shard_count_<<"\n";
 
         // monitor_ = new PCM_Monitor();
         // monitor_->Init();
@@ -102,9 +102,6 @@ public:
         std::vector<uint64_t> counters(2, 0);// =  monitor_->GetCounter();
         double t = std::chrono::duration_cast<std::chrono::duration<double>>(std::chrono::steady_clock::now() - t1).count();
 
-        // cache_->CandidateSelection(cache_agg_mode, feature_, graph_);
-        // cache_->CostModel(cache_agg_mode, feature_, graph_, counters, train_step_);
-        // cache_->FillUp(cache_agg_mode, feature_, graph_);
         cache_->HybridInit(feature_, graph_);
 
         std::cout<<"First epoch cost: "<<t<<" s\n";
@@ -300,13 +297,13 @@ public:
         cudaSetDevice(local_dev_id_);
         IPCEnv* env = (IPCEnv*)(params->env);
         int32_t batch_id = params->global_batch_id;
-        if(batch_id % 10 == 0){
+        if(batch_id % 100 == 0){
             std::cout<<"batch id: "<<batch_id<<"\n";
         }
         mode_ = env->GetCurrentMode(batch_id);
         memorypool_->SetCurrentMode(mode_);
         memorypool_->SetIter(env->GetLocalBatchId(batch_id));
-        // env->IPCWait(local_dev_id_, current_pipe_);
+        env->IPCWait(local_dev_id_, current_pipe_);
         
         for(int i = 0; i < op_num_; i++){
             if(i % INTRABATCH_CON >= 1){
@@ -323,14 +320,14 @@ public:
             }
         }
 
-        // env->IPCPost(local_dev_id_, current_pipe_);
+        env->IPCPost(local_dev_id_, current_pipe_);
         current_pipe_ = (current_pipe_ + 1) % interbatch_concurrency_;
         memorypool_ -> SetCurrentPipe(current_pipe_);
     }
 
     void Finalize(RunnerParams* params) override {
         IPCEnv* env = (IPCEnv*)(params->env);
-        // env->IPCWait(local_dev_id_, (current_pipe_ + 1) % interbatch_concurrency_);
+        env->IPCWait(local_dev_id_, (current_pipe_ + 1) % interbatch_concurrency_);
         cudaSetDevice(local_dev_id_);
         memorypool_->Finalize();
     }

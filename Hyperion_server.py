@@ -4,38 +4,11 @@ import subprocess
 import re
 import networkx as nx
 import math
+import sys
 
-def parse_topo_output(output):
-    """
-    Parses the output from `nvidia-smi topo -m` to extract the NVLink connections between GPUs.
-    This function is adjusted based on your provided example output.
-    """
-    connections = []
-    lines = output.splitlines()
-    gpu_lines = [line for line in lines if line.startswith("GPU")]
-    for i, line in enumerate(gpu_lines):
-        elements = line.split()
-        for j, elem in enumerate(elements[1:], start=0):  # Start from the first GPU column
-            if elem.startswith("NV"):
-                connections.append((i, j))
-    return connections
+sys.path.append("sampling_server/build")  
+import hyperion
 
-def get_nvlink_topology():
-    # Execute the `nvidia-smi topo -m` command to get the topology matrix
-    result = subprocess.run(['nvidia-smi', 'topo', '-m'], stdout=subprocess.PIPE, text=True)
-    connections = parse_topo_output(result.stdout)
-    return connections
-
-def find_largest_fully_connected_group(G):
-    """
-    Finds the largest fully connected group (clique) in the graph and returns its size
-    and the list of such groups if there are multiple of the same size.
-    """
-    cliques = list(nx.find_cliques(G))
-    max_size = max(len(clique) for clique in cliques) if cliques else 1
-    max_cliques = [clique for clique in cliques if len(clique) == max_size]
-    return max_size, max_cliques
-        
 def Run(args):
 
     if args.dataset_name == "products":
@@ -86,42 +59,47 @@ def Run(args):
         train_set_num = 95520748
         valid_set_num = 100000
         test_set_num = 100000
+    elif args.dataset_name == "igb":
+        path = args.dataset_path + "/igb/"
+        vertices_num = 269346175
+        edges_num = 3870892894
+        features_dim = 256
+        train_set_num = 2693461
+        valid_set_num = 165
+        test_set_num = 218
     else:
         print("invalid dataset path")
         exit
     
 
     with open("meta_config","w") as file:
-        file.write("{} {} {} {} {} {} {} {} {} {}".format(path, args.train_batch_size, vertices_num, edges_num, features_dim, train_set_num, valid_set_num, test_set_num, args.cache_memory, args.epoch))
-
-    gpu_number = args.gpu_number
+        file.write("{} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} ".format(path, args.train_batch_size, vertices_num, edges_num, \
+                                                features_dim, train_set_num, valid_set_num, test_set_num, \
+                                            args.epoch, 0, args.ssd_number, args.num_queues_per_ssd, \
+                                        args.CPU_Topo_memory, args.GPU_Topo_memory, args.CPU_Feat_memory, args.GPU_Feat_memory))
     
-    if args.usenvlink == 1:
-        connections = get_nvlink_topology()
-        G = nx.Graph()
-        G.add_edges_from(connections)
-        group_size, fully_connected_groups = find_largest_fully_connected_group(G)
-        if fully_connected_groups or group_size == 1:
-            print(f"NVLink clique size: {group_size}, Number of NVLink cliques: {int(gpu_number/group_size)}")
-        cache_agg_mode = math.log2(group_size)
-    else:
-        cache_agg_mode = 0
-
-    os.system("./sampling_server/build/bin/sampling_server {} {}".format(gpu_number, cache_agg_mode))
-    ## TODO, integrate Legion server in python module
-
+    server = hyperion.NewGPUServer()
+    server.initialize(gpu_number=1, fanout=args.fanout) ## configure fanouts
+    server.presc(0)
+    server.run()
+    server.finalize()
 
 if __name__ == "__main__":
 
     argparser = argparse.ArgumentParser("Legion Server.")
-    argparser.add_argument('--dataset_path', type=str, default="./dataset")
-    argparser.add_argument('--dataset_name', type=str, default="ukunion")
+    argparser.add_argument('--dataset_path', type=str, default="/share/gnn_data")
+    argparser.add_argument('--dataset_name', type=str, default="igb")
     argparser.add_argument('--train_batch_size', type=int, default=8000)
     argparser.add_argument('--fanout', type=list, default=[25, 10])
-    argparser.add_argument('--gpu_number', type=int, default=2)
+    argparser.add_argument('--gpu_number', type=int, default=1)
     argparser.add_argument('--epoch', type=int, default=2)
-    argparser.add_argument('--cache_memory', type=int, default=38000000)
-    argparser.add_argument('--usenvlink', type=int, default=1)
+    argparser.add_argument('--ssd_number', type=int, default=2)
+    argparser.add_argument('--num_queues_per_ssd', type=int, default=128)
+    argparser.add_argument('--CPU_Topo_memory', type=int, default=3300000000)
+    argparser.add_argument('--GPU_Topo_memory', type=int, default=20000)
+    argparser.add_argument('--CPU_Feat_memory', type=int, default=600000000)
+    argparser.add_argument('--GPU_Feat_memory', type=int, default=2000000000)
+
     args = argparser.parse_args()
 
     Run(args)

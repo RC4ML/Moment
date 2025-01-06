@@ -122,6 +122,7 @@ struct UserQueue{
         // int32_t* h_miss_cnt = (int32_t*)malloc(sizeof(int32_t));
         // cudaMemcpy(h_miss_cnt, p_miss_cnt, sizeof(int32_t), cudaMemcpyDeviceToHost);
         // std::cout<<"op "<<op_id<<" cache miss "<<h_miss_cnt[0]<<"\n";
+        // cudaDeviceSynchronize();
         return d_ret_;
     }
 };

@@ -221,12 +221,15 @@ __global__ void random_sample(
 			int32_t part_offset = parition_offset[idx/count];
 			int64_t start_index;
 			int32_t col_size;
-			if(part_id < 0){
-				start_index = csr_node_index[partition_count][sample_src_id];
-				col_size = csr_node_index[partition_count][(sample_src_id + 1)] - start_index;
+			if(part_id == -2){
+				start_index = csr_node_index[2][sample_src_id];//from ssd
+				col_size = csr_node_index[2][(sample_src_id + 1)] - start_index;
+			}else if (part_id == -1){
+				start_index = csr_node_index[1][part_offset];//from cpu
+				col_size = csr_node_index[1][(part_offset + 1)] - start_index;
 			}else{
-				start_index = csr_node_index[part_id][part_offset];
-				col_size = csr_node_index[part_id][(part_offset + 1)] - start_index;
+				start_index = csr_node_index[0][part_offset];//from gpu
+				col_size = csr_node_index[0][(part_offset + 1)] - start_index;
 			}
 
 			if(neighbor_offset >= col_size){
@@ -236,11 +239,13 @@ __global__ void random_sample(
 				engine.discard(idx);
 				thrust::uniform_int_distribution<> dist(0, col_size - 1);
 				int32_t dst_index = dist(engine);
-				if(part_id < 0){
-					sample_dst_id = csr_dst_node_ids[partition_count][(int64_t(start_index + int64_t(dst_index)))];
-				}else{
-					sample_dst_id = csr_dst_node_ids[part_id][(int64_t(start_index + int64_t(dst_index)))];
-				}
+				// if(part_id < 0){
+				// 	sample_dst_id = csr_dst_node_ids[partition_count][(int64_t(start_index + int64_t(dst_index)))];
+				// }else{
+				// 	sample_dst_id = csr_dst_node_ids[part_id][(int64_t(start_index + int64_t(dst_index)))];
+				// }
+				sample_dst_id = csr_dst_node_ids[0-part_id][(int64_t(start_index + int64_t(dst_index)))];
+
 				if(sample_dst_id >= 0){
 					int32_t bitmap_idx = sample_dst_id / 32;
 					int32_t bitmap_off = sample_dst_id % 32;
@@ -554,7 +559,8 @@ void IOComplete(
   UnifiedCache*   cache, 
   MemoryPool*     memorypool,
   int32_t         dev_id,
-  int32_t         mode)
+  int32_t         mode,
+  bool 			  is_presc)
 {
 	if(mode == TRAINMODE){
 		int32_t* agg_dst_id = memorypool->GetAggDstId();
@@ -565,10 +571,10 @@ void IOComplete(
 		int32_t* agg_src_off = memorypool->GetAggSrcOf();
 		int32_t* agg_dst_off = memorypool->GetAggDstOf();
 		int32_t* position_map = memorypool->GetPositionMap();
-
-		feature->IOComplete(strm_hdl);
-		cudaCheckError();
-		
+		if(!is_presc){
+			feature->IOComplete(strm_hdl);
+			cudaCheckError();
+		}
 		dim3 block_num(32, 1);
 		dim3 thread_num(OP_THREAD_NUM, 1);
 		ClearPosMap<<<block_num, thread_num, 0, strm_hdl>>>(position_map, sampled_ids, node_counter);

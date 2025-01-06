@@ -1,6 +1,6 @@
 #include "storage_management.cuh"
 #include "storage_management_impl.cuh"
-
+#include <cassert>
 
 void StorageManagement::EnableP2PAccess(){
     int32_t central_device = -1;
@@ -74,8 +74,6 @@ void StorageManagement::ReadMetaFIle(BuildInfo* info){
     std::cout<<"Validation set num: "<<validation_set_num_<<"\n";
     iss >> testing_set_num_;
     std::cout<<"Testing set num:    "<<testing_set_num_<<"\n";
-    iss >> cache_memory_;
-    std::cout<<"Cache memory:       "<<cache_memory_<<"\n";
     iss >> epoch_;
     std::cout<<"Train epoch:        "<<epoch_<<"\n";
     info->epoch = epoch_;
@@ -85,10 +83,6 @@ void StorageManagement::ReadMetaFIle(BuildInfo* info){
     std::cout<<"SSD Num?:           "<<num_ssd_<<"\n";
     iss >> num_queues_per_ssd_;
     std::cout<<"Q/SSD    ?:         "<<num_queues_per_ssd_<<"\n";
-    iss >> cpu_cache_capacity_;
-    std::cout<<"CPU Cache Capacity: "<<cpu_cache_capacity_<<"\n";
-    iss >> gpu_cache_capacity_;
-    std::cout<<"GPU Cache Capacity: "<<gpu_cache_capacity_<<"\n";
     iss >> cpu_topo_size_;
     std::cout<<"CPU Topo Capacity: "<<cpu_topo_size_<<"\n";
     iss >> gpu_topo_size_;
@@ -97,8 +91,6 @@ void StorageManagement::ReadMetaFIle(BuildInfo* info){
     std::cout<<"CPU Feat Capacity: "<<cpu_feat_size_<<"\n";
     iss >> gpu_feat_size_;
     std::cout<<"GPU Feat Capacity: "<<gpu_feat_size_<<"\n";
-
-
 
     info->cudaDevice = 0;
     info->cudaDeviceId = 0;
@@ -210,7 +202,6 @@ void StorageManagement::LoadFeature(BuildInfo* info){
 
     std::cout<<training_set_num_<<"\n";
     int trainingset_count = 0;
-    std::cout<<"partition count "<<partition_count<<"\n";
     for(int32_t i = 0; i < training_set_num_; i+=1){
         int32_t tid = training_ids[i];
         int32_t part_id;
@@ -219,33 +210,16 @@ void StorageManagement::LoadFeature(BuildInfo* info){
         }else{
             part_id = tid % partition_count;
         }
-        // part_id = (part_id / 2) * 2 + (tid % 2);
         if(part_id < partition_count){
             (info->training_set_ids[part_id]).push_back(tid);
             trainingset_count ++ ;
-            // (info->training_set_ids[part_id]).push_back(training_ids[i + 1]);
-            // (info->training_set_ids[part_id]).push_back(training_ids[i + 2]);
         }
 
-        // if(part_id < partition_count / 2){
-        //     part_id = tid % (partition_count / 2);
-        // }else{
-        //     part_id = (partition_count / 2) + (tid % (partition_count / 2));
-        // }
-
     }
-    // std::cout<<"training set count "<<trainingset_count<<"\n";
 
     for(int32_t i = 0; i < validation_set_num_; i++){
         int32_t tid = validation_ids[i];
         int32_t part_id = tid % partition_count;
-        // int32_t part_id = partition_index[tid];
-        // if(part_id < partition_count / 2){
-        //     part_id = tid % (partition_count / 2);
-        // }else{
-        //     part_id = (partition_count / 2) + (tid % (partition_count / 2));
-        // }
-
         if(part_id < partition_count){
             (info->validation_set_ids[part_id]).push_back(tid);
         }
@@ -254,13 +228,6 @@ void StorageManagement::LoadFeature(BuildInfo* info){
     for(int32_t i = 0; i < testing_set_num_; i++){
         int32_t tid = testing_ids[i];
         int32_t part_id = tid % partition_count;
-        // int32_t part_id = partition_index[tid];
-        // if(part_id < partition_count / 2){
-        //     part_id = tid % (partition_count / 2);
-        // }else{
-        //     part_id = (partition_count / 2) + (tid % (partition_count / 2));
-        // }
-        
         if(part_id < partition_count){
             (info->testing_set_ids[part_id]).push_back(tid);
         }
@@ -335,8 +302,8 @@ void StorageManagement::Initialze(int32_t shard_count){
     int32_t train_step = env_->GetTrainStep();
 
     cudaSetDevice(0);
-    cache_ -> Initialize(cache_memory_, float_feature_len_, train_step, shard_count, cpu_cache_capacity_, gpu_cache_capacity_, cpu_topo_size_, gpu_topo_size_, cpu_feat_size_, gpu_feat_size_);
-    cudaSetDevice(0);
+    assert (shard_count == 1);
+    cache_ -> Initialize(float_feature_len_, train_step, shard_count, cpu_topo_size_, gpu_topo_size_, cpu_feat_size_, gpu_feat_size_);
     std::cout<<"Storage Initialized\n";
 }
 

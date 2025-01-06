@@ -139,10 +139,15 @@ $ bash build.sh
 ```
 There are two steps to train a GNN model in Hyperion. In these steps, you need to change to **root**/**sudo** user for GPU Direct SSD Access.
 ### 4.2 Start Hyperion Server
-
+Hyperion will be compiled according to your current python environment. To allow `sudo` user to run Hyperion, you can get your current python path:
 ```
-$ sudo python Hyperion_server.py --dataset_path 'dataset' --dataset_name ukunion --train_batch_size 8000 --fanout [25,10] --epoch 2 
+$ python3 -c "import sys; print(sys.executable)"
 ```
+Then execute the following instruction:
+```
+$ sudo /path/python Hyperion_server.py --dataset_path 'dataset' --dataset_name igb --train_batch_size 8000 --fanout [25,10] --epoch 2 
+```
+You can customize your own dataset path.
 
 ### 4.3 Run Hyperion Training
 #### (Optional) Configure SM Utilization of Training Backend:
@@ -152,13 +157,15 @@ $ sudo nvidia-smi -i 0 -c EXCLUSIVE_PROCESS  # Set GPU0 to exclusive process mod
 $ sudo nvidia-cuda-mps-control -d            # Start the MPS service
 # ====== check =========
 $ ps -ef | grep mps                     # After starting successfully, the corresponding process can be seen
+# ====== configure =========
+$ export CUDA_MPS_ACTIVE_THREAD_PERCENTAGE=80 # Assign the percentage of action SMs for the training backend
 # ====== stop =========
 $ sudo nvidia-smi -i 0 -c DEFAULT       # Restore GPU to default mode
 $ echo quit | nvidia-cuda-mps-control   # Stop the MPS service
 ```
 After Hyperion outputs "System is ready for serving", then start training by: 
 ```
-$ sudo python training_backend/Hyperion_graphsage.py --class_num 2  --features_num 128 --hidden_dim 256 --hops_num 2 --epoch 2
+$ sudo python training_backend/hyperion_graphsage.py --class_num 2  --features_num 128 --hidden_dim 256 --hops_num 2 --epoch 2
 ```
 
 ## Cite this work
