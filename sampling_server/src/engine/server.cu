@@ -13,6 +13,7 @@
 #include <thread>
 #include <functional>
 #include <chrono>
+#include <barrier>
 
 
 // Macro for checking cuda errors following a cuda launch or api call
@@ -35,17 +36,27 @@ void PreSCLoop(int train_step, Runner* runner, RunnerParams* params){
 } 
 
 void RunnerLoop(int max_step, Runner* runner, RunnerParams* params){
+    // std::cout<<"max_step: "<<max_step<<std::endl;
     for(int i = 0; i < max_step; i++){
         params->global_batch_id = i;
         runner->RunOnce(params);
     }
 }
+// void RunnerLoop(std::barrier<>* barrier, int max_step, Runner* runner, RunnerParams* params){
+//     for(int i = 0; i < max_step; i++){
+//         params->global_batch_id = i;
+//         barrier->arrive_and_wait();
+//         runner->RunOnce(params);
+//         barrier->arrive_and_wait();
+
+//     }
+// }
 
 class GPUServer : public Server {
 public:
     void Initialize(int global_shard_count, std::vector<int> fanout) {
         shard_count_ = global_shard_count;
-        // std::cout<<"CUDA Device Count: "<<shard_count_<<"\n";
+        std::cout<<"CUDA Device Count: "<<shard_count_<<"\n";
 
         // monitor_ = new PCM_Monitor();
         // monitor_->Init();
@@ -83,7 +94,7 @@ public:
         }
     }
 
-    void PreSc(int cache_agg_mode) {
+    void PreSc() {
         std::cout<<"Start Pre-sampling"<<std::endl;
         // monitor_->Start();
         std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
@@ -102,8 +113,11 @@ public:
         std::vector<uint64_t> counters(2, 0);// =  monitor_->GetCounter();
         double t = std::chrono::duration_cast<std::chrono::duration<double>>(std::chrono::steady_clock::now() - t1).count();
 
+        // cache_->CandidateSelection(cache_agg_mode, feature_, graph_);
+        // cache_->CostModel(cache_agg_mode, feature_, graph_, counters, train_step_);
+        // cache_->FillUp(cache_agg_mode, feature_, graph_);
         cache_->HybridInit(feature_, graph_);
-
+        
         std::cout<<"First epoch cost: "<<t<<" s\n";
 
         std::cout<<"System is ready for serving\n";
@@ -112,9 +126,11 @@ public:
     void Run() {
         // monitor_->Start();
         std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
+        // std::barrier barrier(shard_count_);
         for(int i = 0; i < shard_count_; i++){
             Runner* runner = runners_[i];
             RunnerParams* params = params_[i];
+            // std::thread th(&RunnerLoop, &barrier, max_step_, runner, params);
             std::thread th(&RunnerLoop, max_step_, runner, params);
             train_thread_pool_.push_back(std::move(th));
         }
@@ -134,7 +150,7 @@ public:
         }
         graph_->Finalize();
         feature_->Finalize();
-        // cache_->Finalize();
+        cache_->Finalize();
         ipc_env_->Finalize();
         std::cout<<"Server Stopped\n";
     }
@@ -190,6 +206,7 @@ public:
             max_ids_num += max_num_per_hop[i];
         }
         num_ids_ = max_ids_num;
+
         op_num_ = (hop_num + 1) * INTRABATCH_CON + 1;
         op_factory_.resize(op_num_);
         op_factory_[0] = NewBatchGenerateOP(0);
@@ -207,7 +224,7 @@ public:
         interbatch_concurrency_ = interbatch_concurrency;
 
         int total_num_nodes = feature->TotalNodeNum();
-        cache->InitializeCacheController(local_dev_id_, total_num_nodes);/*control cache memory by current actor*/
+        cache->InitializeCacheController(local_dev_id_, total_num_nodes);   /*control cache memory by current actor*/
 
         memorypool_                     = new MemoryPool(interbatch_concurrency);
         int32_t* cache_search_buffer    = (int32_t*)d_alloc_space(num_ids_ * sizeof(int32_t));
@@ -220,7 +237,7 @@ public:
         memorypool_->SetAggSrcId(agg_src_ids);
         int32_t* agg_dst_ids            = (int32_t*)d_alloc_space(num_ids_ * sizeof(int32_t));
         memorypool_->SetAggDstId(agg_dst_ids);
-        int32_t* tmp_part_ind              = (int32_t*)d_alloc_space(num_ids_ * sizeof(int32_t));
+        char* tmp_part_ind              = (char*)d_alloc_space(num_ids_ * sizeof(char));
         memorypool_->SetTmpPartIdx(tmp_part_ind);
         int32_t* tmp_part_off           = (int32_t*)d_alloc_space(num_ids_ * sizeof(int32_t));
         memorypool_->SetTmpPartOff(tmp_part_off);
@@ -247,6 +264,7 @@ public:
         for(int i = 0; i < op_num_; i++){
             op_params_[i] = new OpParams();
             op_params_[i]->device_id    = local_dev_id_;
+            // op_params_[i]->stream       = streams_[0];
             op_params_[i]->stream       = (streams_[i%INTRABATCH_CON]);
             cudaEventCreate(&events_[i]);
             op_params_[i]->event        = (events_[i]);
@@ -267,8 +285,6 @@ public:
     void InitializeFeaturesBuffer(RunnerParams* params) override {
         UnifiedCache* cache     = (UnifiedCache*)(params->cache);
         int32_t num_ids         = int32_t((cache->MaxIdNum(local_dev_id_)) * 1.2);
-        std::cout<<"vertex per epoch: "<<int(num_ids/1.2)<<"\n";
-        // num_ids = num_ids / 151;
         IPCEnv* env             = (IPCEnv*)(params->env);
         env->InitializeFeaturesBuffer(0, num_ids, float_feature_len_, local_dev_id_, interbatch_concurrency_);
         for(int i = 0; i < interbatch_concurrency_; i++){
@@ -297,13 +313,13 @@ public:
         cudaSetDevice(local_dev_id_);
         IPCEnv* env = (IPCEnv*)(params->env);
         int32_t batch_id = params->global_batch_id;
-        if(batch_id % 100 == 0){
-            std::cout<<"batch id: "<<batch_id<<"\n";
+        if(batch_id % 10 == 0){
+            std::cout<<"batch id: "<<batch_id<<"\tdev_id: "<<params->device_id<<"\n";
         }
         mode_ = env->GetCurrentMode(batch_id);
         memorypool_->SetCurrentMode(mode_);
         memorypool_->SetIter(env->GetLocalBatchId(batch_id));
-        env->IPCWait(local_dev_id_, current_pipe_);
+        // env->IPCWait(local_dev_id_, current_pipe_);
         
         for(int i = 0; i < op_num_; i++){
             if(i % INTRABATCH_CON >= 1){
@@ -311,6 +327,15 @@ public:
             }
             op_params_[i]->is_presc = false;
             op_factory_[i]->run(op_params_[i]);
+            // if(batch_id == 7){
+            //     auto start = std::chrono::high_resolution_clock::now();
+            //     op_factory_[i]->run(op_params_[i]);
+            //     auto end = std::chrono::high_resolution_clock::now();
+            //     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+            //     std::cout << "Duration: " << duration.count() << " milliseconds" << std::endl;
+            // }else{
+            //     op_factory_[i]->run(op_params_[i]);
+            // }
         }
         
         bool is_ready = false;
@@ -320,14 +345,14 @@ public:
             }
         }
 
-        env->IPCPost(local_dev_id_, current_pipe_);
+        // env->IPCPost(local_dev_id_, current_pipe_);
         current_pipe_ = (current_pipe_ + 1) % interbatch_concurrency_;
         memorypool_ -> SetCurrentPipe(current_pipe_);
     }
 
     void Finalize(RunnerParams* params) override {
         IPCEnv* env = (IPCEnv*)(params->env);
-        env->IPCWait(local_dev_id_, (current_pipe_ + 1) % interbatch_concurrency_);
+        // env->IPCWait(local_dev_id_, (current_pipe_ + 1) % interbatch_concurrency_);
         cudaSetDevice(local_dev_id_);
         memorypool_->Finalize();
     }

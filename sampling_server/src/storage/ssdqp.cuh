@@ -8,7 +8,6 @@ public:
     volatile uint32_t *sq;
     volatile uint32_t *cq;
     uint32_t sq_tail;
-    uint32_t sq_tail_old;
     uint32_t cq_head;
     uint32_t cmd_id; // also number of commands submitted
     uint32_t namespace_id;
@@ -26,7 +25,6 @@ public:
     __host__ __device__ SSDQueuePair(volatile uint32_t *sq, volatile uint32_t *cq, uint32_t namespace_id, uint32_t *sqtdbl, uint32_t *cqhdbl, uint32_t queue_depth, uint32_t *cmd_id_to_req_id = nullptr, uint32_t *cmd_id_to_sq_pos = nullptr, bool *sq_entry_busy = nullptr)
         : sq(sq), cq(cq), sq_tail(0), cq_head(0), cmd_id(0), namespace_id(namespace_id), sqtdbl(sqtdbl), cqhdbl(cqhdbl), cmd_id_to_req_id(cmd_id_to_req_id), cmd_id_to_sq_pos(cmd_id_to_sq_pos), sq_entry_busy(sq_entry_busy), queue_depth(queue_depth), num_completed(0)
     {
-        sq_tail_old = 0;
     }
 
     __host__ __device__ void submit(uint32_t &cid, uint32_t opcode, uint64_t prp1, uint64_t prp2, uint32_t dw10, uint32_t dw11, uint32_t dw12 = 0)
@@ -42,6 +40,7 @@ public:
     __host__ __device__ void fill_sq(uint32_t cid, uint32_t pos, uint32_t opcode, uint64_t prp1, uint64_t prp2, uint32_t dw10, uint32_t dw11, uint32_t dw12 = 0, uint32_t req_id = 0xffffffff)
     {
         // if (req_id == 1152)
+        //     printf("%lx %lx %x %x %x %x %x %x\n", prp1, prp2, dw10, dw11, dw12, opcode, cid, namespace_id);
         sq[pos * 16 + 0] = opcode | (cid << 16);
         sq[pos * 16 + 1] = namespace_id;
         sq[pos * 16 + 6] = prp1 & 0xffffffff;
@@ -51,8 +50,6 @@ public:
         sq[pos * 16 + 10] = dw10;
         sq[pos * 16 + 11] = dw11;
         sq[pos * 16 + 12] = dw12;
-        // printf("%u %u %u %u %u %u %u %u\n", opcode | (cid << 16), namespace_id, prp1 & 0xffffffff, prp1 >> 32, prp2 & 0xffffffff, prp2 >> 32, dw10, dw11, dw12);
-        // printf("%u, %u\n", namespace_id, opcode);
         if (cmd_id_to_req_id)
             cmd_id_to_req_id[cid % queue_depth] = req_id;
         if (cmd_id_to_sq_pos)

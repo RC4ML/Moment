@@ -30,10 +30,7 @@ public:
     
     virtual void IOSubmit(int32_t* sampled_ids, int32_t* cache_index,
                   int32_t* node_counter, float* dst_float_buffer,
-                  int32_t op_id, cudaStream_t strm_hdl) = 0;
-
-    virtual void IOComplete(cudaStream_t strm_hdl) = 0;
-
+                  int32_t op_id, int32_t dev_id, cudaStream_t strm_hdl) = 0;
 };
 
 extern "C" 

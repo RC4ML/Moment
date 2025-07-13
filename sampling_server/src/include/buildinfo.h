@@ -24,6 +24,9 @@ struct BuildInfo{
     int32_t total_num_nodes;
     int32_t float_feature_len;
     float* host_float_feature;//allocated by cudaHostAlloc
+    //sample_
+    std::vector<char> sample_bin_ids;
+    std::vector<int64_t> sample_orders;
 
     //bam params
     uint32_t        cudaDevice;

@@ -56,12 +56,10 @@ void IOSubmit(
 extern "C"
 void IOComplete(
   cudaStream_t    strm_hdl, 
-  FeatureStorage* feature,
   UnifiedCache*   cache, 
   MemoryPool*     memorypool,
   int32_t         dev_id,
-  int32_t         mode,
-  bool    			  is_presc
+  int32_t         mode
 );
 
 #endif

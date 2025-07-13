@@ -10,8 +10,6 @@
 constexpr size_t TEST_SIZE = 0x10000000;         // Test data size, in bytes
 constexpr size_t APP_BUF_SIZE = 0x10000000;     // Application buffer size
 constexpr int NUM_QUEUES_PER_SSD = 128;         // Number of queues per SSD
-constexpr int NUM_SSDS = 2;                     // Number of SSDs
-constexpr int IO_SIZE = 4096;                     // Total IO size of a single request, in bytes
 
 // Kernel to initialize application buffer
 __global__ void fill_app_buf(uint64_t *app_buf) {
@@ -21,9 +19,11 @@ __global__ void fill_app_buf(uint64_t *app_buf) {
 }
 
 // Main function
-int main() {
+int main(int argc, char** argv) {
     // Initialize IOStack
-    IOStack iostack(NUM_SSDS, NUM_QUEUES_PER_SSD, 1, 32);
+    int num_ssd = atoi(argv[1]);
+    int io_size = atoi(argv[2]);
+    IOStack iostack(num_ssd, NUM_QUEUES_PER_SSD, 1, 32);
 
     // Allocate application buffer
     uint64_t *app_buf;
@@ -31,7 +31,7 @@ int main() {
     fill_app_buf<<<1, 1>>>(app_buf);
 
     // Allocate and initialize request buffers
-    int num_reqs = TEST_SIZE / IO_SIZE;
+    int num_reqs = TEST_SIZE / io_size;
     IOReq *reqs;
     CHECK(cudaMalloc(&reqs, sizeof(IOReq) * num_reqs));
     IOReq *h_reqs;
@@ -48,14 +48,14 @@ int main() {
         uint64_t lb;
         do {
             uint64_t idx = (((unsigned long)rand() << 31) | rand());
-            lb = (idx % NUM_SSDS) * (NUM_LBS_PER_SSD / MAX_ITEMS) + idx % (NUM_LBS_PER_SSD / MAX_ITEMS);
+            lb = (idx % num_ssd) * (NUM_LBS_PER_SSD / MAX_ITEMS) + idx % (NUM_LBS_PER_SSD / MAX_ITEMS);
         } while (lbs.find(lb) != lbs.end());
         lbs.insert(lb);
         
         h_reqs[i].start_lb = lb * MAX_ITEMS;
         h_reqs[i].num_items = MAX_ITEMS;
         for (int j = 0; j < MAX_ITEMS; j++) {
-            h_reqs[i].dest_addr[j] = (uint64_t)(app_buf + (1ll * i * IO_SIZE + j * LBS) % APP_BUF_SIZE / sizeof(uint64_t));
+            h_reqs[i].dest_addr[j] = (uint64_t)(app_buf + (1ll * i * io_size + j * LBS) % APP_BUF_SIZE / sizeof(uint64_t));
         }
 
         if (i >= num_reqs / 100 * percent) {
@@ -92,6 +92,6 @@ int main() {
 
     // Output performance results
     fprintf(stderr, "do_io_req takes %f ms\n", ms);
-    fprintf(stderr, "%dB random read bandwidth: %f MiB/s\n", IO_SIZE, TEST_SIZE * repeat / (1024.0 * 1024.0) / (ms / 1000));
+    fprintf(stderr, "%dB random read bandwidth: %f MiB/s\n", io_size, TEST_SIZE * repeat / (1024.0 * 1024.0) / (ms / 1000));
     return 0;
 }

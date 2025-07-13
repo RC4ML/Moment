@@ -18,7 +18,7 @@
 #define DEVICE_PGSZ 0x10000
 #define CID_MASK 0xffff           // mask: command id
 #define SC_MASK 0xff              // mask: status code
-#define BROADCAST_NSID 0 // broadcast namespace id
+#define BROADCAST_NSID 0xffffffff // broadcast namespace id
 #define OPCODE_SET_FEATURES 0x09
 #define OPCODE_CREATE_IO_CQ 0x05
 #define OPCODE_CREATE_IO_SQ 0x01
@@ -32,8 +32,8 @@
 #define SQ_HEAD_MASK 0xffff
 
 #define MAX_IO_SIZE 4096
-#define LBS 512
-#define MAX_ITEMS (MAX_IO_SIZE / LBS)
+#define ITEM_SIZE 512
+#define MAX_ITEMS (MAX_IO_SIZE / ITEM_SIZE)
 #define NUM_THREADS_PER_BLOCK 512
 #define ADMIN_QUEUE_DEPTH 64
 #define QUEUE_DEPTH 4096

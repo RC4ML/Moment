@@ -66,9 +66,9 @@ void mmap_trainingset_read(std::string &training_file, std::vector<int32_t>& tra
 int32_t mmap_partition_read(std::string &partition_file, int32_t* partition_index){
     int64_t part_idx = 0;
     int32_t fd = open(partition_file.c_str(), O_RDONLY);
-    // if(fd == -1){
-    //     std::cout<<"cannout open file: "<<partition_file<<"\n";
-    // }
+    if(fd == -1){
+        std::cout<<"cannout open file: "<<partition_file<<"\n";
+    }
     int64_t buf_len = lseek(fd, 0, SEEK_END);
     const int32_t* buf = (int32_t *)mmap(NULL, buf_len, PROT_READ, MAP_PRIVATE, fd, 0);
     const int32_t* buf_end = buf + buf_len/sizeof(int32_t);
@@ -157,5 +157,43 @@ void mmap_labels_read(std::string &labels_file, std::vector<int32_t>& labels){
     close(fd);
     return;
 }
+
+void mmap_samples_bin_ids_read(std::string &labels_file, std::vector<char>& samples_bin_ids){
+    int64_t n_idx = 0;
+    int32_t fd = open(labels_file.c_str(), O_RDONLY);
+    if(fd == -1){
+        std::cout<<"cannout open file: "<<labels_file<<"\n";
+    }
+    int64_t buf_len = lseek(fd, 0, SEEK_END);
+    const int64_t *buf = (int64_t *)mmap(NULL, buf_len, PROT_READ, MAP_PRIVATE, fd, 0);
+    const int64_t* buf_end = buf + buf_len/sizeof(int64_t);
+    char temp;
+    while(buf < buf_end){
+        temp = (char)*buf;
+        samples_bin_ids[n_idx++] = temp;
+        buf++;
+    }
+    close(fd);
+    return;
+}
+void mmap_samples_orders_read(std::string &labels_file, std::vector<int64_t>& samples_orders){
+    int64_t n_idx = 0;
+    int32_t fd = open(labels_file.c_str(), O_RDONLY);
+    if(fd == -1){
+        std::cout<<"cannout open file: "<<labels_file<<"\n";
+    }
+    int64_t buf_len = lseek(fd, 0, SEEK_END);
+    const int64_t *buf = (int64_t *)mmap(NULL, buf_len, PROT_READ, MAP_PRIVATE, fd, 0);
+    const int64_t* buf_end = buf + buf_len/sizeof(int64_t);
+    int64_t temp;
+    while(buf < buf_end){
+        temp = *buf;
+        samples_orders[n_idx++] = temp;
+        buf++;
+    }
+    close(fd);
+    return;
+}
+
 
 #endif

@@ -6,9 +6,6 @@ import networkx as nx
 import math
 import sys
 
-sys.path.append("sampling_server/build")  
-import hyperion
-
 def Run(args):
 
     if args.dataset_name == "products":
@@ -75,30 +72,22 @@ def Run(args):
     with open("meta_config","w") as file:
         file.write("{} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} ".format(path, args.train_batch_size, vertices_num, edges_num, \
                                                 features_dim, train_set_num, valid_set_num, test_set_num, \
-                                            args.epoch, 0, args.ssd_number, args.num_queues_per_ssd, \
-                                        args.CPU_Topo_memory, args.GPU_Topo_memory, args.CPU_Feat_memory, args.GPU_Feat_memory))
+                                            0, args.epoch, 0, args.ssd_number, args.num_queues_per_ssd, 100, 100))
     
-    server = hyperion.NewGPUServer()
-    server.initialize(gpu_number=1, fanout=args.fanout) ## configure fanouts
-    server.presc(0)
-    server.run()
-    server.finalize()
+    
+    os.system("./sampling_server/build/bin/server {} {}".format(args.gpu_number, 1))
 
 if __name__ == "__main__":
 
-    argparser = argparse.ArgumentParser("Legion Server.")
-    argparser.add_argument('--dataset_path', type=str, default="/share/gnn_data")
+    argparser = argparse.ArgumentParser("Server.")
+    argparser.add_argument('--dataset_path', type=str, default="/share/gnn_data/igb260m/IGB-Datasets/data")
     argparser.add_argument('--dataset_name', type=str, default="igb")
     argparser.add_argument('--train_batch_size', type=int, default=8000)
     argparser.add_argument('--fanout', type=list, default=[25, 10])
-    argparser.add_argument('--gpu_number', type=int, default=1)
+    argparser.add_argument('--gpu_number', type=int, default=2)
     argparser.add_argument('--epoch', type=int, default=2)
     argparser.add_argument('--ssd_number', type=int, default=2)
     argparser.add_argument('--num_queues_per_ssd', type=int, default=128)
-    argparser.add_argument('--CPU_Topo_memory', type=int, default=3300000000)
-    argparser.add_argument('--GPU_Topo_memory', type=int, default=20000)
-    argparser.add_argument('--CPU_Feat_memory', type=int, default=600000000)
-    argparser.add_argument('--GPU_Feat_memory', type=int, default=2000000000)
 
     args = argparser.parse_args()
 

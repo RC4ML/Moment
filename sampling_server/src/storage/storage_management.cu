@@ -1,6 +1,6 @@
 #include "storage_management.cuh"
 #include "storage_management_impl.cuh"
-#include <cassert>
+
 
 void StorageManagement::EnableP2PAccess(){
     int32_t central_device = -1;
@@ -74,6 +74,8 @@ void StorageManagement::ReadMetaFIle(BuildInfo* info){
     std::cout<<"Validation set num: "<<validation_set_num_<<"\n";
     iss >> testing_set_num_;
     std::cout<<"Testing set num:    "<<testing_set_num_<<"\n";
+    iss >> cache_memory_;
+    std::cout<<"Cache memory:       "<<cache_memory_<<"\n";
     iss >> epoch_;
     std::cout<<"Train epoch:        "<<epoch_<<"\n";
     info->epoch = epoch_;
@@ -83,14 +85,11 @@ void StorageManagement::ReadMetaFIle(BuildInfo* info){
     std::cout<<"SSD Num?:           "<<num_ssd_<<"\n";
     iss >> num_queues_per_ssd_;
     std::cout<<"Q/SSD    ?:         "<<num_queues_per_ssd_<<"\n";
-    iss >> cpu_topo_size_;
-    std::cout<<"CPU Topo Capacity: "<<cpu_topo_size_<<"\n";
-    iss >> gpu_topo_size_;
-    std::cout<<"GPU Topo Capacity: "<<gpu_topo_size_<<"\n";
-    iss >> cpu_feat_size_;
-    std::cout<<"CPU Feat Capacity: "<<cpu_feat_size_<<"\n";
-    iss >> gpu_feat_size_;
-    std::cout<<"GPU Feat Capacity: "<<gpu_feat_size_<<"\n";
+    iss >> cpu_cache_capacity_;
+    std::cout<<"CPU Cache Capacity: "<<cpu_cache_capacity_<<"\n";
+    iss >> gpu_cache_capacity_;
+    std::cout<<"GPU Cache Capacity: "<<gpu_cache_capacity_<<"\n";
+
 
     info->cudaDevice = 0;
     info->cudaDeviceId = 0;
@@ -164,11 +163,13 @@ void StorageManagement::LoadFeature(BuildInfo* info){
     std::string training_path = dataset_path_  + "trainingset";
     std::string validation_path = dataset_path_  + "validationset";
     std::string testing_path = dataset_path_  + "testingset";
+    std::string sample_ids_bin_path = dataset_path_ + "sample_bin_ids";
+    std::string sample_orders_path = dataset_path_ + "sample_orders";
     // std::string training_path = dataset_path_  + "train_ids";
     // std::string validation_path = dataset_path_  + "valid_ids";
     // std::string testing_path = dataset_path_  + "test_ids";
-    std::string features_path = dataset_path_ + "features";
-    std::string labels_path = dataset_path_ + "labels";
+    // std::string features_path = dataset_path_ + "features";
+    // std::string labels_path = dataset_path_ + "labels";
     // std::string labels_path = dataset_path_ + "labels_raw";
 
 
@@ -182,6 +183,11 @@ void StorageManagement::LoadFeature(BuildInfo* info){
     testing_ids.resize(testing_set_num_);
     std::vector<int32_t> all_labels;
     all_labels.resize(node_num);
+
+    std::vector<char> sample_bin_ids;
+    sample_bin_ids.resize(node_num);
+    std::vector<int64_t> sample_orders;
+    sample_orders.resize(node_num);
     // std::vector<char> partition_index;
     int32_t* partition_index = (int32_t*)malloc(int64_t(node_num) * sizeof(int32_t));
     // partition_index.resize(node_num);
@@ -189,10 +195,22 @@ void StorageManagement::LoadFeature(BuildInfo* info){
     // cudaHostAlloc(&host_float_feature, int64_t(int64_t(int64_t(node_num) * nf) * sizeof(float)), cudaHostAllocMapped);
     cudaCheckError();
 
-
     mmap_trainingset_read(training_path, training_ids);
     mmap_trainingset_read(validation_path, validation_ids);
     mmap_trainingset_read(testing_path, testing_ids);
+    // std::cout<<"haha"<<std::endl;
+    mmap_samples_bin_ids_read(sample_ids_bin_path, sample_bin_ids);
+    mmap_samples_orders_read(sample_orders_path, sample_orders);
+    int count = 0;
+    for (char id : sample_bin_ids) {
+        if (id == 0 || id == 1) {
+            count++;
+        }
+    }
+    std::cout<<"count: "<<count<<" "<<"total: "<<sample_bin_ids.size()<<" "<<"ratio: "<< static_cast<double>(count) / sample_bin_ids.size()<<std::endl;
+
+    info->sample_bin_ids = sample_bin_ids;
+    info->sample_orders = sample_orders;
     // mmap_features_read(features_path, host_float_feature);
     // mmap_labels_read(labels_path, all_labels);
     int32_t fdret = mmap_partition_read(partition_path, partition_index);
@@ -200,8 +218,9 @@ void StorageManagement::LoadFeature(BuildInfo* info){
     std::cout<<"Finish Reading All Files\n";
     // partition nodes
 
-    std::cout<<training_set_num_<<"\n";
+    std::cout<<"training_set_num: "<<training_set_num_<<"\n";
     int trainingset_count = 0;
+    // std::cout<<"partition count "<<partition_count<<"\n";
     for(int32_t i = 0; i < training_set_num_; i+=1){
         int32_t tid = training_ids[i];
         int32_t part_id;
@@ -210,16 +229,33 @@ void StorageManagement::LoadFeature(BuildInfo* info){
         }else{
             part_id = tid % partition_count;
         }
+        // part_id = (part_id / 2) * 2 + (tid % 2);
         if(part_id < partition_count){
             (info->training_set_ids[part_id]).push_back(tid);
             trainingset_count ++ ;
+            // (info->training_set_ids[part_id]).push_back(training_ids[i + 1]);
+            // (info->training_set_ids[part_id]).push_back(training_ids[i + 2]);
         }
 
+        // if(part_id < partition_count / 2){
+        //     part_id = tid % (partition_count / 2);
+        // }else{
+        //     part_id = (partition_count / 2) + (tid % (partition_count / 2));
+        // }
+
     }
+    // std::cout<<"training set count "<<trainingset_count<<"\n";
 
     for(int32_t i = 0; i < validation_set_num_; i++){
         int32_t tid = validation_ids[i];
         int32_t part_id = tid % partition_count;
+        // int32_t part_id = partition_index[tid];
+        // if(part_id < partition_count / 2){
+        //     part_id = tid % (partition_count / 2);
+        // }else{
+        //     part_id = (partition_count / 2) + (tid % (partition_count / 2));
+        // }
+
         if(part_id < partition_count){
             (info->validation_set_ids[part_id]).push_back(tid);
         }
@@ -228,6 +264,13 @@ void StorageManagement::LoadFeature(BuildInfo* info){
     for(int32_t i = 0; i < testing_set_num_; i++){
         int32_t tid = testing_ids[i];
         int32_t part_id = tid % partition_count;
+        // int32_t part_id = partition_index[tid];
+        // if(part_id < partition_count / 2){
+        //     part_id = tid % (partition_count / 2);
+        // }else{
+        //     part_id = (partition_count / 2) + (tid % (partition_count / 2));
+        // }
+        
         if(part_id < partition_count){
             (info->testing_set_ids[part_id]).push_back(tid);
         }
@@ -242,7 +285,7 @@ void StorageManagement::LoadFeature(BuildInfo* info){
         }
         info->training_set_num.push_back(info->training_set_ids[part_id].size());
     }
-    std::cout<<info->training_set_num[0]<<" "<<info->training_set_ids[0].size()<<"\n";
+    // std::cout<<info->training_set_num[0]<<" "<<info->training_set_ids[0].size()<<"\n";
     for(int32_t part_id = 0; part_id < partition_count; part_id++){
         for(int32_t i = 0; i < info->validation_set_ids[part_id].size(); i++){
             int32_t ts_label = all_labels[info->validation_set_ids[part_id][i]];
@@ -278,7 +321,7 @@ void StorageManagement::Initialze(int32_t shard_count){
     LoadGraph(info);
 
     LoadFeature(info);
-
+    
     env_ = NewIPCEnv(shard_count);
     env_ -> Coordinate(info);
 
@@ -302,8 +345,8 @@ void StorageManagement::Initialze(int32_t shard_count){
     int32_t train_step = env_->GetTrainStep();
 
     cudaSetDevice(0);
-    assert (shard_count == 1);
-    cache_ -> Initialize(float_feature_len_, train_step, shard_count, cpu_topo_size_, gpu_topo_size_, cpu_feat_size_, gpu_feat_size_);
+    cache_ -> Initialize(cache_memory_, float_feature_len_, train_step, shard_count, cpu_cache_capacity_, gpu_cache_capacity_, dataset_path_);
+    cudaSetDevice(0);
     std::cout<<"Storage Initialized\n";
 }
 

@@ -1,3 +1,6 @@
+cd IOStack && \
+make && \
+cd .. 
 cd sampling_server && \
 make clean && make -j 8 && \
 cd .. 

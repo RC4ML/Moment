@@ -52,9 +52,10 @@ public:
     node_counter_.resize(device_count);
     edge_counter_.resize(device_count);
     device_count_ = device_count;
-
+    // std::cout<<"device count: "<<device_count_<<"\n";
     semr_.resize(device_count);
     semw_.resize(device_count);
+    // std::cout<<"initialize ipc env done\n";
   }
   
   void Coordinate(BuildInfo* info) override {

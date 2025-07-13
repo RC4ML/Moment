@@ -177,7 +177,7 @@ __global__ void random_sample(
 	int32_t   op_id,
 	int64_t** csr_node_index, 
 	int32_t** csr_dst_node_ids,
-	int32_t*     partition_index,
+	char*     partition_index,
 	int32_t*  parition_offset,
 	int32_t   count, 
 	int32_t   partition_count, 
@@ -221,15 +221,12 @@ __global__ void random_sample(
 			int32_t part_offset = parition_offset[idx/count];
 			int64_t start_index;
 			int32_t col_size;
-			if(part_id == -2){
-				start_index = csr_node_index[2][sample_src_id];//from ssd
-				col_size = csr_node_index[2][(sample_src_id + 1)] - start_index;
-			}else if (part_id == -1){
-				start_index = csr_node_index[1][part_offset];//from cpu
-				col_size = csr_node_index[1][(part_offset + 1)] - start_index;
+			if(part_id < 0){
+				start_index = csr_node_index[partition_count][sample_src_id];
+				col_size = csr_node_index[partition_count][(sample_src_id + 1)] - start_index;
 			}else{
-				start_index = csr_node_index[0][part_offset];//from gpu
-				col_size = csr_node_index[0][(part_offset + 1)] - start_index;
+				start_index = csr_node_index[part_id][part_offset];
+				col_size = csr_node_index[part_id][(part_offset + 1)] - start_index;
 			}
 
 			if(neighbor_offset >= col_size){
@@ -239,13 +236,11 @@ __global__ void random_sample(
 				engine.discard(idx);
 				thrust::uniform_int_distribution<> dist(0, col_size - 1);
 				int32_t dst_index = dist(engine);
-				// if(part_id < 0){
-				// 	sample_dst_id = csr_dst_node_ids[partition_count][(int64_t(start_index + int64_t(dst_index)))];
-				// }else{
-				// 	sample_dst_id = csr_dst_node_ids[part_id][(int64_t(start_index + int64_t(dst_index)))];
-				// }
-				sample_dst_id = csr_dst_node_ids[0-part_id][(int64_t(start_index + int64_t(dst_index)))];
-
+				if(part_id < 0){
+					sample_dst_id = csr_dst_node_ids[partition_count][(int64_t(start_index + int64_t(dst_index)))];
+				}else{
+					sample_dst_id = csr_dst_node_ids[part_id][(int64_t(start_index + int64_t(dst_index)))];
+				}
 				if(sample_dst_id >= 0){
 					int32_t bitmap_idx = sample_dst_id / 32;
 					int32_t bitmap_off = sample_dst_id % 32;
@@ -308,7 +303,7 @@ __global__ void pre_sample(
 	int32_t   op_id,
 	int64_t* csr_node_index, 
 	int32_t* csr_dst_node_ids,
-	int32_t*     partition_index,
+	char*     partition_index,
 	int32_t*  parition_offset,
 	int32_t   count, 
 	int32_t   partition_count, 
@@ -360,7 +355,7 @@ __global__ void pre_sample(
 				int32_t dst_index = dist(engine);
 				sample_dst_id = csr_dst_node_ids[(int64_t(start_index + int64_t(dst_index)))];
 				if(sample_dst_id >= 0){
-					atomicAdd(edge_access_time + sample_src_id, 1);
+					// atomicAdd(edge_access_time + sample_src_id, 1);
 
 					int32_t bitmap_idx = sample_dst_id / 32;
 					int32_t bitmap_off = sample_dst_id % 32;
@@ -422,7 +417,7 @@ void RandomSample(
 	int32_t** csr_dst_node_ids 		= graph -> GetCSRNodeMatrix(dev_id);
 	int64_t** csr_node_index  		= graph -> GetCSRNodeIndex(dev_id);
 	int32_t partition_count 		= graph -> GetPartitionCount();
-	int32_t* partition_index 			= graph -> PartitionIndex(dev_id);
+	char* partition_index 			= graph -> PartitionIndex(dev_id);
 	int32_t* parition_offset 		= graph -> PartitionOffset(dev_id);
 
 	uint32_t* accessed_map 			= memorypool->GetAccessedMap();
@@ -434,13 +429,14 @@ void RandomSample(
 	int32_t* agg_dst_ids 			= memorypool->GetAggDstId();
 	int32_t* agg_src_off 			= memorypool->GetAggSrcOf();
 	int32_t* agg_dst_off 			= memorypool->GetAggDstOf();
-	int32_t* tmp_partition_index  		= memorypool->GetTmpPartIdx();
+	char* tmp_partition_index  		= memorypool->GetTmpPartIdx();
 	int32_t* tmp_parition_offset	= memorypool->GetTmpPartOff();
 	int32_t* cache_index 			= memorypool->GetCacheSearchBuffer();
 
     dim3 block_num(16, 1);
     dim3 thread_num(OP_THREAD_NUM, 1);
 	if(!is_presc){
+		// std::cout<<"random_sample\n";
 		int32_t* h_node_counter = (int32_t*)malloc(16*sizeof(int32_t));
 		cudaMemcpy(h_node_counter, node_counter, 64, cudaMemcpyDeviceToHost);
 		cudaCheckError();
@@ -473,6 +469,7 @@ void RandomSample(
 																											dev_id);	
 		cudaCheckError();
 	}else{
+		// std::cout<<"!pre_sample\n";
 		int32_t* pin_csr_dst_node_ids = graph -> GetCSRNodeMatrixCPU();
 		int64_t* pin_csr_node_index  = graph -> GetCSRNodeIndexCPU();
 		unsigned long long int* edge_access_time = cache->GetEdgeAccessedMap(dev_id);
@@ -536,10 +533,11 @@ void IOSubmit(
 	float* dst_float_buffer 	= memorypool->GetFloatFeatures();
 	int32_t* node_counter 		= memorypool->GetNodeCounter();
 	int32_t* edge_counter 		= memorypool->GetEdgeCounter();
-
-	counter_update<<<1, 1, 0, (strm_hdl)>>>(node_counter, edge_counter, op_id, 0, 0);		
+	// printf("update start!\n");
+	counter_update<<<1, 1, 0, (strm_hdl)>>>(node_counter, edge_counter, op_id, 0, 0);	
+	// printf("update finished!\n");
 	cudaCheckError();
-	feature->IOSubmit(sampled_ids, cache_index, node_counter, dst_float_buffer, op_id, strm_hdl);
+	feature->IOSubmit(sampled_ids, cache_index, node_counter, dst_float_buffer, op_id, dev_id, strm_hdl);
 	cudaCheckError();
 }
 
@@ -555,12 +553,10 @@ __global__ void ClearPosMap(int32_t* position_map, int32_t* sampled_ids, int32_t
 extern "C"
 void IOComplete(
   cudaStream_t    strm_hdl, 
-  FeatureStorage* feature,
   UnifiedCache*   cache, 
   MemoryPool*     memorypool,
   int32_t         dev_id,
-  int32_t         mode,
-  bool 			  is_presc)
+  int32_t         mode)
 {
 	if(mode == TRAINMODE){
 		int32_t* agg_dst_id = memorypool->GetAggDstId();
@@ -570,11 +566,9 @@ void IOComplete(
 		int32_t* sampled_ids = memorypool->GetSampledIds();
 		int32_t* agg_src_off = memorypool->GetAggSrcOf();
 		int32_t* agg_dst_off = memorypool->GetAggDstOf();
+
 		int32_t* position_map = memorypool->GetPositionMap();
-		if(!is_presc){
-			feature->IOComplete(strm_hdl);
-			cudaCheckError();
-		}
+			// cudaMemsetAsync(position_map, 0, int64_t(int64_t(total_node_num) * int64_t(sizeof(int32_t))), (strm_hdl));
 		dim3 block_num(32, 1);
 		dim3 thread_num(OP_THREAD_NUM, 1);
 		ClearPosMap<<<block_num, thread_num, 0, strm_hdl>>>(position_map, sampled_ids, node_counter);

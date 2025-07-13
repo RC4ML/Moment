@@ -1,9 +1,12 @@
 NVCC = nvcc
 
-all: test
+all: test_ssd test_pcie
 
-test: test.cu common.cuh iostack.cuh ssdqp.cuh
+test_pcie: pcie_bw.cu 
+	$(NVCC) $(CFLAGS) -o $@ $< -g
+
+test_ssd: ssd_bw.cu common.cuh iostack.cuh ssdqp.cuh
 	$(NVCC) $(CFLAGS) -o $@ $< -g
 
 clean:
-	rm -f test decouple
+	rm -f test_ssd test_pcie

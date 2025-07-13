@@ -111,13 +111,12 @@ public:
         op_id_ = op_id;
     }
     void run(OpParams* params) override {
-        FeatureStorage* feature     = (FeatureStorage*)(params->feature);
         UnifiedCache* cache         = (UnifiedCache*)(params->cache);
         MemoryPool* memorypool      = (MemoryPool*)(params->memorypool);
         int mode                    = memorypool->GetCurrentMode();
         int32_t device_id           = params->device_id;
-        bool is_presc               = params->is_presc;
-        IOComplete(params->stream, feature, cache, memorypool, device_id, mode, is_presc);
+    
+        IOComplete(params->stream, cache, memorypool, device_id, mode);
         cudaEventRecord(((params->event)), ((params->stream)));
         cudaCheckError();
     }
@@ -128,3 +127,4 @@ private:
 Operator* NewSSDIOCompleteOP(int op_id){
     return new SSDIOCompleteOP(op_id);
 }
+
