@@ -3,7 +3,7 @@
 $ git clone https://github.com/RC4ML/Moment.git
 ```
 
-## 1. Preparation of Hardware and Software 
+## 1. Preparation of Hardware and Software [Skip this section during SC AE]
 ### 1.1 Hardware Recommended
 Local bare-metal machine.
 Table 1
@@ -79,14 +79,14 @@ $ bash prepare_datasets.sh
 $ bash build.sh
 ```
 There are two steps to train a GNN model in Moment. In these steps, you need to change to **root**/**sudo** user for GPU Direct SSD Access.
-### 4.2 Start Moment Server
-Moment will be compiled according to your current python environment. To allow `sudo` user to run Moment, you can get your current python path:
+### 4.2 Run Moment's Automatic Module
 ```
-$ python3 -c "import sys; print(sys.executable)"
+$ sudo python3 automatic_module.py
 ```
-Then execute the following instruction:
+### 4.3 Start Moment Server
+Execute the following instruction:
 ```
-$ sudo /path/python Moment_server.py --dataset_path 'dataset' --dataset_name igb --train_batch_size 8000 --fanout [25,10] --epoch 2 
+$ sudo python3 Moment_server.py --dataset_name igb --train_batch_size 8000 --fanout [25,10] --epoch 2 
 ```
 You can customize your own dataset path.
 
