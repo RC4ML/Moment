@@ -1,11 +1,6 @@
-# Hyperion is an Out-of-core GNN Training System with GPU-initiated Asynchronous Disk IO Stack [ICDE 25]
-With the rapid expansion of large models and datasets, GPU memory capacity is increasingly becoming a bottleneck. Out-of-core (disk-based) systems offer a cost-efficient solution to this challenge. Modern NVMe SSDs, with their terabytes of capacity and throughput of up to 7 GB/s (PCIe 4.0), present a promising option for managing large-scale models/data.
-
-We introduce Hyperion, a cost-efficient out-of-core GNN training system designed to handle terabyte-scale graphs, which can achieve in-memory-like GNN training throughput with some cheap NVMe SSDs. At its core is a GPU-initiated asynchronous disk IO stack, optimized to fully leverage the performance of modern NVMe SSDs. Beyond GNN systems, this IO stack is versatile and can be extended to other applications, such as DLRM, KVCache, and RAG systems (if you need GPU to orchestrate disk access directly). To support broader adoption, we also provide the IO stack as a standalone component for independent use.
-
-
+# Moment [SC 25]
 ```
-$ git clone https://github.com/RC4ML/Hyperion.git
+$ git clone https://github.com/RC4ML/Moment.git
 ```
 
 ## 1. Preparation of Hardware and Software 
@@ -55,7 +50,7 @@ $ make
 #### Step 4 Loading/Unloading the Kernel Module
 Unbind the NVMe drivers according to your needs (customize unload_ssd.py):
 ```
-$ sudo python /path/Hyperion/unload_ssd.py 
+$ sudo python /path/Moment/unload_ssd.py 
 $ cd /path/BaM/build/module
 $ sudo make load
 ```
@@ -69,87 +64,33 @@ The module can be unloaded from the project root directory with the following:
 $ cd build/module
 $ sudo make unload
 ```
-## 2. Standalone Usage of GPU-Initiated Asynchronous Disk IO Stack
-GPU-initiated asynchronous disk IO stack is the key component of Hyperion, maximizing the throughput of GPU-initiated direct disk access with only a few GPU cores.
-Traditional (synchronous) GPU-initiated IO stack design requires collocating IO submission and IO completion within the same thread/warp, leading to interference between them. As a result, GPU needs to launch a massive number of threads/warps to maximize the IO submission throughput. In contrast, we propose an asynchronous design, which decouples IO submission with IO completion. With the asynchronous design, we can only launch about 1% of GPU cores to saturate SSDs while wasting no GPU cores for other computation kernels between IO submission and completion.
-
-You can try to integrate it into your own AI system.
-
-<img src="https://github.com/user-attachments/assets/5914271d-0592-4c9a-a57b-a5fe8efe3cb5" alt="IO Stack Figure" style="width:50%; height:auto;">
-
-### Quick Start
-```
-$ cd IOStack
-$ make
-$ sudo ./test
-```
-### User Interface
-In this part, we introduce the usage of the IO stack. The code of the IO stack is head-only and can be easily integrated into your projects. We regard NVMe SSDs as block-device, i.e., users should know which SSD logic blocks to access. We define `LBS` as the minimal logic block size. `LBS` is usually 512 bytes. `NUM_LBS_PER_SSD` is the total number of logic blocks in each SSD.
-#### Initialize IO stack
-Initialize the IO stack with configurable parameters. `num_ssds` is the total number of SSDs and `num_queue_per_ssd` is the SQ/CQ number of each SSD. `io_submission_TB_num` and `io_completion_TB_num` are the thread block number of IO submission kernels and IO completion kernels, respectively. In our evaluated platforms, setting `io_submission_TB_num` to **1** and setting `io_completion_TB_num` to **32** is sufficient to maximize SSD throughput (even for 12 * SSDs).
-```cpp
-IOStack(int num_ssds, int num_queue_per_ssd, int io_submission_TB_num, int io_completion_TB_num)
-```
-#### IO Submission
-The IO stack supports submitting multiple micro-batches of IO requests and only handling their completion once. Call the io_submission with the IO requests array in GPU memory and the number of requests.
-You can also assign the asynchronous CUDA stream for the io_submission.
-```cpp
-void IOStack::io_submission(IOReq *reqs, int num_reqs, cudaStream_t stream);
-```
-Each IO request needs to be organized in the following structure. `start_lb` represents the logic block index in the SSDs. The `start_lb` of i-th logic block in the j-th SSD should be `NUM_LBS_PER_SSD*j+i`. Each IO request can read `num_items` logically-continuous blocks (`num_items` is not larger than `MAX_ITEMS`). For the k-th logic block in a request, users can assign its output virtual address, i.e., `dest_addr[k]` in the GPU global memory. 
-```cpp
-struct IOReq
-{
-    uint64_t start_lb;
-    uint64_t dest_addr[MAX_ITEMS];
-    int num_items;
-    ...
-};
-```
-#### IO Completion
-Call the `io_completion` at a suitable time. It will handle the completion of all previous IO requests.
-```cpp
-void IOStack::io_completion(cudaStream_t stream);
-```
-#### Example:
-Concurrently initiate the IO requests and GNN computation. The disk access (stream1) can be overlapped with GNN computation (stream2).
-```cpp
-io_submission(reqs_micro_batch1, num_reqs_batch1, stream1);
-GNN_Kernel(..., stream2) ## GNN computation
-io_submission(reqs_micro_batch2, num_reqs_batch2, stream1);
-GNN_Kernel(..., stream2) ## GNN computation
-io_submission(reqs_micro_batch3, num_reqs_batch3, stream1);
-GNN_Kernel(..., stream2) ## GNN computation
-io_completion(stream1);
-```
-Refer to test.cu for more details.
-## 3. Prepare Datasets for GNN Training
+## 2. Prepare Datasets for GNN Training
 Datasets are from OGB (https://ogb.stanford.edu/), Standford-snap (https://snap.stanford.edu/), and Webgraph (https://webgraph.di.unimi.it/).
-Here is an example of preparing datasets for Hyperion.
+Here is an example of preparing datasets for Moment.
 
 ### Uk-Union Datasets
 Refer to README in dataset directory for more instructions
 ```
 $ bash prepare_datasets.sh
 ```
-## 4. Run Hyperion
-### 4.1 Build Hyperion from Source
+## 3. Run Moment
+### 4.1 Build Moment from Source
 ```
 $ bash build.sh
 ```
-There are two steps to train a GNN model in Hyperion. In these steps, you need to change to **root**/**sudo** user for GPU Direct SSD Access.
-### 4.2 Start Hyperion Server
-Hyperion will be compiled according to your current python environment. To allow `sudo` user to run Hyperion, you can get your current python path:
+There are two steps to train a GNN model in Moment. In these steps, you need to change to **root**/**sudo** user for GPU Direct SSD Access.
+### 4.2 Start Moment Server
+Moment will be compiled according to your current python environment. To allow `sudo` user to run Moment, you can get your current python path:
 ```
 $ python3 -c "import sys; print(sys.executable)"
 ```
 Then execute the following instruction:
 ```
-$ sudo /path/python Hyperion_server.py --dataset_path 'dataset' --dataset_name igb --train_batch_size 8000 --fanout [25,10] --epoch 2 
+$ sudo /path/python Moment_server.py --dataset_path 'dataset' --dataset_name igb --train_batch_size 8000 --fanout [25,10] --epoch 2 
 ```
 You can customize your own dataset path.
 
-### 4.3 Run Hyperion Training
+### 4.3 Run Moment Training
 #### (Optional) Configure SM Utilization of Training Backend:
 ```
 $ export CUDA_VISIBLE_DEVICES=0         # Example using GPU0, adjust for other GPUs as needed
@@ -163,27 +104,9 @@ $ export CUDA_MPS_ACTIVE_THREAD_PERCENTAGE=80 # Assign the percentage of action 
 $ sudo nvidia-smi -i 0 -c DEFAULT       # Restore GPU to default mode
 $ echo quit | nvidia-cuda-mps-control   # Stop the MPS service
 ```
-After Hyperion outputs "System is ready for serving", then start training by: 
+After Moment outputs "System is ready for serving", then start training by: 
 ```
-$ sudo python training_backend/hyperion_graphsage.py --class_num 2  --features_num 128 --hidden_dim 256 --hops_num 2 --epoch 2
+$ sudo python training_backend/Moment_graphsage.py --class_num 2  --features_num 128 --hidden_dim 256 --hops_num 2 --epoch 2
 ```
 
-## Cite this work
-If Hyperion and the IO stack are helpful for your research, please cite our work
-
-```
-@inproceedings{sun2024hyperion,
-  title={Hyperion: Optimizing SSD Access is All You Need to Enable Cost-efficient Out-of-core GNN Training}, 
-  author={Jie Sun and Mo Sun and Zheng Zhang and Jun Xie and Zuocheng Shi and Zihan Yang and Jie Zhang and Fei Wu and Zeke Wang},
-  year={2025},
-  booktitle={ICDE}
-}
-
-@article{sun2023helios,
-  title={Helios: An Efficient Out-of-core GNN Training System on Terabyte-scale Graphs with In-memory Performance},
-  author={Sun, Jie and Sun, Mo and Zhang, Zheng and Xie, Jun and Shi, Zuocheng and Yang, Zihan and Zhang, Jie and Wu, Fei and Wang, Zeke},
-  journal={arXiv preprint arXiv:2310.00837},
-  year={2023}
-}
-```
 
