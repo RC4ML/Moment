@@ -74,23 +74,23 @@ Refer to README in dataset directory for more instructions
 $ bash prepare_datasets.sh
 ```
 ## 3. Run Moment
-### 4.1 Build Moment from Source
+### 3.1 Build Moment from Source
 ```
 $ bash build.sh
 ```
 There are two steps to train a GNN model in Moment. In these steps, you need to change to **root**/**sudo** user for GPU Direct SSD Access.
-### 4.2 Run Moment's Automatic Module
+### 3.2 Run Moment's Automatic Module
 ```
 $ sudo python3 automatic_module.py
 ```
-### 4.3 Start Moment Server
+### 3.3 Start Moment Server
 Execute the following instruction:
 ```
 $ sudo python3 moment_server.py --dataset_name igb --train_batch_size 8000 --fanout [25,10] --epoch 2 
 ```
 You can customize your own dataset path.
 
-### 4.3 Run Moment Training
+### 3.4 Run Moment Training
 #### (Optional) Configure SM Utilization of Training Backend:
 ```
 $ export CUDA_VISIBLE_DEVICES=0         # Example using GPU0, adjust for other GPUs as needed
