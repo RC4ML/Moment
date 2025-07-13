@@ -86,7 +86,7 @@ $ sudo python3 automatic_module.py
 ### 4.3 Start Moment Server
 Execute the following instruction:
 ```
-$ sudo python3 Moment_server.py --dataset_name igb --train_batch_size 8000 --fanout [25,10] --epoch 2 
+$ sudo python3 moment_server.py --dataset_name igb --train_batch_size 8000 --fanout [25,10] --epoch 2 
 ```
 You can customize your own dataset path.
 
@@ -106,7 +106,7 @@ $ echo quit | nvidia-cuda-mps-control   # Stop the MPS service
 ```
 After Moment outputs "System is ready for serving", then start training by: 
 ```
-$ sudo python training_backend/Moment_graphsage.py --class_num 2  --features_num 128 --hidden_dim 256 --hops_num 2 --epoch 2
+$ sudo python3 training_backend/moment_graphsage.py --class_num 2  --features_num 128 --hidden_dim 256 --hops_num 2 --epoch 2
 ```
 
 
