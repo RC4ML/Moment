@@ -386,11 +386,11 @@ void dequeue_kernel(char* sample_bin_ids, int64_t* sample_orders,int32_t* node_c
     for(;thread_id<batch_size;thread_id+=blockDim.x*gridDim.x){
         int32_t input_id = input_ids[thread_id];
         int32_t cache_idx = cache_index[thread_id];
-        if(cache_index < 0 || sample_bin_ids[input_id] > 2){
+        if(cache_index < 0 || sample_bin_ids[input_id] >= 2){
             uint64_t offset = atomicAdd(p_miss_cnt, 1);
             // printf("offset:%d\n", offset);
             // d_ret[offset].start_lb = uint64_t(input_id % num_ssd) * NUM_LBS_PER_SSD + uint64_t(input_id / num_ssd) * feature_block_size;//raid0
-            d_ret[offset].start_lb = (sample_bin_ids[input_id]-3) * NUM_LBS_PER_SSD + sample_orders[input_id] * feature_block_size + 1000000000;//raid0
+            d_ret[offset].start_lb = (sample_bin_ids[input_id]-2) * NUM_LBS_PER_SSD + sample_orders[input_id] * feature_block_size + 1000000000;//raid0
             d_ret[offset].num_items = feature_block_size;
             for(int j = 0; j < feature_block_size; j++){
                 // if(thread_id == 0 && j == 0)

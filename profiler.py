@@ -1,17 +1,22 @@
 import os
 import subprocess
 import re
+import string
 from pathlib import Path
 from typing import Tuple
+from prune_tree.auto_prune_pcie_tree import auto_gen_maxslots_and_connections
 
 def get_hardware():
-    max_slots = {
-        'A': 1, 
-        'B': 9, 
-        'C': 4, 
-        'D': 5
-    }
-    return max_slots
+    module_max_slots, connections = auto_gen_maxslots_and_connections()
+
+    letters = string.ascii_uppercase[:len(module_max_slots)]
+    ordered_keys = list(module_max_slots.keys())
+
+    letter_mapping = dict(zip(letters, ordered_keys))
+    max_slots = {letter: module_max_slots[key]
+                 for letter, key in zip(letters, ordered_keys)}
+
+    return max_slots, connections, letter_mapping
 
 SSD_PAT = re.compile(
     r"bandwidth[^0-9+-.]*([0-9]+(?:\.[0-9]*)?(?:[eE][+-]?\d+)?)\s*([kMGT]i?B/s)",
@@ -19,12 +24,12 @@ SSD_PAT = re.compile(
 )
 
 PCIE_PAT = re.compile(
-    r"""Host\s*                 # 'Host' 后可有空格
-        (?:→|->)\s*Device:      # 支持 '→' 或 '->'
-        \s*([0-9]+(?:\.[0-9]+)?)# 捕获带宽数值
-        \s*(Gi?B/s)             # 捕获单位（GiB/s 或 GB/s）
+    r"""Host\s*                 
+        (?:→|->)\s*Device:      
+        \s*([0-9]+(?:\.[0-9]+)?)
+        \s*(Gi?B/s)             
     """,
-    re.I | re.X                 # 忽略大小写 + 允许空白注释
+    re.I | re.X                 
 )
 
 def measure_ssd_bw(num_ssd: int,
@@ -68,7 +73,7 @@ def measure_pcie_bw(
     proc = subprocess.run(
         cmd,
         stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,   # 把 stderr 合并进 stdout
+        stderr=subprocess.STDOUT,  
         text=True,
         check=True,
     )
@@ -115,6 +120,7 @@ def read_access_times(file_path):
 
 if __name__ == "__main__":
     DEBUG = True 
-    max_slots = get_hardware()
-    print("max_slots =", max_slots)
-    run_profiler(2, 3, 1024)
+    max_slots, connections = get_hardware()
+    # print("max_slots =", max_slots)
+    # run_profiler(2, 3, 1024)
+    print(max_slots)

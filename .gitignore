@@ -9,3 +9,4 @@ training_backend/build
 training_backend/dist
 training_backend/ipcservice.egg-info
 meta_config
+__pycache__/

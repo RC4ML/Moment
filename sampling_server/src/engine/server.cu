@@ -150,7 +150,7 @@ public:
         }
         graph_->Finalize();
         feature_->Finalize();
-        cache_->Finalize();
+        // cache_->Finalize();
         ipc_env_->Finalize();
         std::cout<<"Server Stopped\n";
     }

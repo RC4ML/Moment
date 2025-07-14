@@ -82,7 +82,8 @@ def allocate_balanced_samples_prior(samples, k, capacities, targets):
         if i < len(samples) // 100:  # Assume top 1% are the hottest
             target_heap = special_bins_priority
         else:
-            target_heap = general_bins_priority if not special_bins_priority else special_bins_priority
+            # target_heap = general_bins_priority if not special_bins_priority else special_bins_priority
+            target_heap = general_bins_priority if general_bins_priority else special_bins_priority
 
         allocated = False
         while not allocated and target_heap:
@@ -150,7 +151,7 @@ def run_ddak(file_path, access_times, hotness, capacity, num_node):
 
     # CPU1_Hot = 141.0508*1024*1024*1024/granularity
     # CPU2_Hot = 196.4505*1024*1024*1024/granularity
-    C = capacity #[CPU_cap] * num_cpu + [SSD_cap] * num_ssd + [GPU_cap] * num_gpu
+    C = capacity #[CPU_cap] * num_cpu + [SSD_cap] * num_ssd
     # C = [CPU_cap, CPU_cap, SSD_cap, SSD_cap, SSD_cap, SSD_cap, SSD_cap, SSD_cap, SSD_cap, SSD_cap]  # 例如：第0和第1个分块容量较小
     # X = [CPU1_Hot, CPU2_Hot, A_SSD3_0_Hot, A_SSD3_0_Hot, A_SSD3_0_Hot, B_SSD4_0_Hot, B_SSD4_0_Hot, B_SSD4_0_Hot, B_SSD4_0_Hot, C_SSD1_0_Hot]
     X = hotness # [CPU1_Hot, CPU2_Hot, SSD_Hot, SSD_Hot, SSD_Hot, SSD_Hot, SSD_Hot, SSD_Hot, SSD_Hot, SSD_Hot]
