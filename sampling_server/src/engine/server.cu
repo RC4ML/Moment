@@ -319,7 +319,7 @@ public:
         mode_ = env->GetCurrentMode(batch_id);
         memorypool_->SetCurrentMode(mode_);
         memorypool_->SetIter(env->GetLocalBatchId(batch_id));
-        // env->IPCWait(local_dev_id_, current_pipe_);
+        env->IPCWait(local_dev_id_, current_pipe_);
         
         for(int i = 0; i < op_num_; i++){
             if(i % INTRABATCH_CON >= 1){
@@ -345,14 +345,14 @@ public:
             }
         }
 
-        // env->IPCPost(local_dev_id_, current_pipe_);
+        env->IPCPost(local_dev_id_, current_pipe_);
         current_pipe_ = (current_pipe_ + 1) % interbatch_concurrency_;
         memorypool_ -> SetCurrentPipe(current_pipe_);
     }
 
     void Finalize(RunnerParams* params) override {
         IPCEnv* env = (IPCEnv*)(params->env);
-        // env->IPCWait(local_dev_id_, (current_pipe_ + 1) % interbatch_concurrency_);
+        env->IPCWait(local_dev_id_, (current_pipe_ + 1) % interbatch_concurrency_);
         cudaSetDevice(local_dev_id_);
         memorypool_->Finalize();
     }
