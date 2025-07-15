@@ -7,6 +7,7 @@ from typing import Tuple
 from prune_tree.auto_prune_pcie_tree import auto_gen_maxslots_and_connections
 
 def get_hardware():
+    print("Get Hardware: Slots and Connections")
     module_max_slots, connections = auto_gen_maxslots_and_connections()
 
     letters = string.ascii_uppercase[:len(module_max_slots)]
@@ -18,95 +19,33 @@ def get_hardware():
 
     return max_slots, connections, letter_mapping
 
-SSD_PAT = re.compile(
-    r"bandwidth[^0-9+-.]*([0-9]+(?:\.[0-9]*)?(?:[eE][+-]?\d+)?)\s*([kMGT]i?B/s)",
-    re.I,
-)
 
-PCIE_PAT = re.compile(
-    r"""Host\s*                 
-        (?:→|->)\s*Device:      
-        \s*([0-9]+(?:\.[0-9]+)?)
-        \s*(Gi?B/s)             
-    """,
-    re.I | re.X                 
-)
+def parse_bandwidth_file(path="bandwidth_results.txt"):
+    with open(path, "r") as f:
+        line1 = f.readline().strip()
+        ssd_bd = float(line1)
 
-def measure_ssd_bw(num_ssd: int,
-                   granularity: int,
-                   exe_path: str | Path = "./IOStack/test_ssd",
-                   use_sudo: bool = True,
-                   verbose: bool = False) -> Tuple[float, float, str]:
-    cmd = ([ "sudo" ] if use_sudo else []) + \
-          [ str(exe_path), str(num_ssd), str(granularity) ]
+        line2 = f.readline().strip()
+        pcie_bd = float(line2)
 
-    proc = subprocess.run(
-        cmd,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,   # 把 stderr 合并进 stdout
-        text=True,
-        check=True,
-    )
-
-    if verbose:
-        print("=== raw output ===")
-        print(proc.stdout)
-
-    for line in proc.stdout.splitlines():
-        m = SSD_PAT.search(line)
-        if m:
-            total_bw = float(m.group(1))
-            unit = m.group(2)
-            per_ssd = total_bw / num_ssd if num_ssd else 0.0
-            return total_bw, per_ssd, unit
-
-    raise RuntimeError("Error")
-
-
-def measure_pcie_bw(
-                   exe_path: str | Path = "./IOStack/test_pcie",
-                   use_sudo: bool = True,
-                   verbose: bool = False) -> Tuple[float, float, str]:
-    cmd = ([ "sudo" ] if use_sudo else []) + \
-          [ str(exe_path), str(40), str(4) ]
-
-    proc = subprocess.run(
-        cmd,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,  
-        text=True,
-        check=True,
-    )
-
-    if verbose:
-        print("=== raw output ===")
-        print(proc.stdout)
-
-    for line in proc.stdout.splitlines():
-        m = PCIE_PAT.search(line)
-        if m:
-            total_bw = float(m.group(1))
-            # unit = m.group(2)
-            return total_bw#, unit
-
-    raise RuntimeError("Error")
+    return ssd_bd, pcie_bd
 
 def run_profiler(num_gpu, num_ssd, dim):
     print("Start Profilling")
-    total, ssd_bd, unit = measure_ssd_bw(num_ssd, dim*4)
-    ssd_bd = ssd_bd / 1000.0
+    os.system("./IOStack/test_ssd {} {} > /dev/null 2>&1".format(num_ssd, dim*4))
+    os.system("./IOStack/test_pcie {} {} > /dev/null 2>&1".format(40, 4))
+    ssd_bd, pcie_bd = parse_bandwidth_file()
+    ssd_bd = ssd_bd / num_ssd
     print("SSD bandwidth {}GiB/s".format(ssd_bd))
-    pcie_bd = measure_pcie_bw()
     print("PCIe bandwidth {}GiB/s".format(pcie_bd))
-
-    os.system("./sampling_server/build/bin/server {} {}".format(num_gpu, 0))
+    os.system("./sampling_server/build/bin/server {} {} ".format(num_gpu, 0))
     return ssd_bd, pcie_bd
 
 def read_access_times(file_path):
     """ Read access times from a given file. Each line should contain an integer representing the access count for a sample. """
     access_times = []
     total_lines = sum(1 for line in open(file_path, 'r'))  # Quickly count lines for progress tracking
-    print(f"Total lines to read: {total_lines}")
+    print(f"Read Access Time")
     try:
         with open(file_path, 'r') as file:
             for i, line in enumerate(file):

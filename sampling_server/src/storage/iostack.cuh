@@ -535,7 +535,7 @@ public:
     void init_ssd_per_gpu(int ssd_id)
     {
         // open file and map BAR
-        fprintf(stderr, "setting up SSD %d\n", ssd_id);
+        // fprintf(stderr, "setting up SSD %d\n", ssd_id);
         char fname[20];
         // if(ssd_id == 0){
         //     sprintf(fname, "/dev/libnvm7");
@@ -565,7 +565,7 @@ public:
         // SSD 是否成功启动
         while (*(uint32_t volatile *)(h_reg_ptr + REG_CSTS) & REG_CSTS_RDY)
             ;
-        fprintf(stderr, "reset done\n");
+        // fprintf(stderr, "reset done\n");
 
         // set admin_qp queue attributes
         *(uint32_t *)(h_reg_ptr + REG_AQA) = ((ADMIN_QUEUE_DEPTH - 1) << 16) | (ADMIN_QUEUE_DEPTH - 1);
@@ -591,13 +591,13 @@ public:
         // fprintf(stderr,"asq:%ld\n",asq);
         // fprintf(stderr,"Address at asq: %p\n", (volatile uint32_t *)asq);
         SSDQueuePair admin_qp((volatile uint32_t *)asq, (volatile uint32_t *)acq, BROADCAST_NSID, (uint32_t *)(h_reg_ptr + REG_SQTDBL), (uint32_t *)(h_reg_ptr + REG_CQHDBL), ADMIN_QUEUE_DEPTH);
-        fprintf(stderr, "set admin_qp queue attributes done\n");
+        // fprintf(stderr, "set admin_qp queue attributes done\n");
 
         // enable controller
         *(uint32_t *)(h_reg_ptr + REG_CC) |= REG_CC_EN;
         while (!(*(uint32_t volatile *)(h_reg_ptr + REG_CSTS) & REG_CSTS_RDY))
             ;
-        fprintf(stderr, "enable controller done\n");
+        // fprintf(stderr, "enable controller done\n");
 
         // set number of I/O queues, NVMe 中的命令长度均为 16 DW（64 Bytes）
         uint32_t cid;
@@ -610,7 +610,7 @@ public:
             fprintf(stderr, "set number of queues failed with status 0x%x\n", status);
             exit(1);
         }
-        fprintf(stderr, "set number of queues done!\n");
+        // fprintf(stderr, "set number of queues done!\n");
 
         for (int gpu_id = 0; gpu_id < nums_gpus; ++gpu_id)
         {
@@ -659,7 +659,7 @@ public:
                 CHECK(cudaMemcpy(d_ssdqp_[gpu_id] + ssd_id * num_queues_per_ssd_per_gpu + i, &current_qp, sizeof(SSDQueuePair), cudaMemcpyHostToDevice));
             }
             // free(phys);
-            fprintf(stderr, "create GPU%d I/O queues done!\n", gpu_id);
+            // fprintf(stderr, "create GPU%d I/O queues done!\n", gpu_id);
 
             // alloc IO buffer
             phys = cudaMallocAlignedMapped(d_io_buf_[gpu_id], (size_t)QUEUE_IOBUF_SIZE * num_queues_per_ssd_per_gpu, fd);
@@ -676,7 +676,7 @@ public:
             // fprintf(stderr, "d_io_buf_: %ld\n",d_io_buf_);
             // fprintf(stderr, "phys: %ld\n",phys);
             h_IO_buf_base_[gpu_id][ssd_id] = (uint64_t *)d_io_buf_[gpu_id];
-            fprintf(stderr, "create GPU%d I/O buffers done!\n", gpu_id);
+            // fprintf(stderr, "create GPU%d I/O buffers done!\n", gpu_id);
             // for (int i = 0; i < QUEUE_IOBUF_SIZE * num_queues_per_ssd_ / DEVICE_PGSZ; i++)
             //     printf("%lx\n", phys[i]);
 

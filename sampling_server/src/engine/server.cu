@@ -118,7 +118,7 @@ public:
         // cache_->FillUp(cache_agg_mode, feature_, graph_);
         cache_->HybridInit(feature_, graph_);
         
-        std::cout<<"First epoch cost: "<<t<<" s\n";
+        // std::cout<<"First epoch cost: "<<t<<" s\n";
 
         std::cout<<"System is ready for serving\n";
     }
@@ -313,8 +313,8 @@ public:
         cudaSetDevice(local_dev_id_);
         IPCEnv* env = (IPCEnv*)(params->env);
         int32_t batch_id = params->global_batch_id;
-        if(batch_id % 10 == 0){
-            std::cout<<"batch id: "<<batch_id<<"\tdev_id: "<<params->device_id<<"\n";
+        if(batch_id % 10 == 0 && params->device_id == 0){
+            std::cout<<"batch id: "<<batch_id<<"\n";
         }
         mode_ = env->GetCurrentMode(batch_id);
         memorypool_->SetCurrentMode(mode_);

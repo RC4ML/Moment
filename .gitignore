@@ -9,4 +9,6 @@ training_backend/build
 training_backend/dist
 training_backend/ipcservice.egg-info
 meta_config
-__pycache__/
+__pycache__
+prune_tree/__pycache__
+bandwidth_results.txt

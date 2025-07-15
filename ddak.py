@@ -52,12 +52,12 @@ def allocate_balanced_samples(samples, k, capacities, targets):
             else:
                 print(f"Warning: No capacity left for Sample {sample} with Access {access}.")
 
-        if (i + 1) % (len(samples) // 10) == 0:
-            print(f"Distribution Progress: {(i + 1) / len(samples) * 100:.2f}%")
+        # if (i + 1) % (len(samples) // 10) == 0:
+        #     print(f"Distribution Progress: {(i + 1) / len(samples) * 100:.2f}%")
 
     # Print final distributions
-    for i, bin in enumerate(bins):
-        print(f"Bin {i+1}: Total Access = {bin['total_access']} (Target = {bin['target']}), Samples = {len(bin['samples'])}/{bin['capacity']}")
+    # for i, bin in enumerate(bins):
+    #     print(f"Bin {i+1}: Total Access = {bin['total_access']} (Target = {bin['target']}), Samples = {len(bin['samples'])}/{bin['capacity']}")
 
     return bins, sample_bin_ids, sample_orders
 
@@ -112,11 +112,11 @@ def allocate_balanced_samples_prior(samples, k, capacities, targets):
                         allocated = True
 
         if (i + 1) % (len(samples) // 10) == 0:
-            print(f"Distribution Progress: {(i + 1) / len(samples) * 100:.2f}%")
+            print(f"DDAk Progress: {(i + 1) / len(samples) * 100:.2f}%")
 
     # Print final distributions
-    for i, bin in enumerate(bins):
-        print(f"Bin {i+1}: Total Access = {bin['total_access']} (Target = {bin['target']}), Samples = {len(bin['samples'])}/{bin['capacity']}")
+    # for i, bin in enumerate(bins):
+    #     print(f"Bin {i+1}: Total Access = {bin['total_access']} (Target = {bin['target']}), Samples = {len(bin['samples'])}/{bin['capacity']}")
 
     return bins, sample_bin_ids, sample_orders
 
@@ -131,7 +131,7 @@ def save_arrays_to_binary(file_bin_ids, file_orders, bin_ids, orders):
     # Save to files
     np_bin_ids.tofile(file_bin_ids)
     np_orders.tofile(file_orders)
-    print(f"Saved bin IDs to {file_bin_ids} and orders to {file_orders}.")
+    # print(f"Saved bin IDs to {file_bin_ids} and orders to {file_orders}.")
 
 
 def run_ddak(file_path, access_times, hotness, capacity, num_node):
@@ -152,7 +152,7 @@ def run_ddak(file_path, access_times, hotness, capacity, num_node):
     # CPU1_Hot = 141.0508*1024*1024*1024/granularity
     # CPU2_Hot = 196.4505*1024*1024*1024/granularity
     C = capacity #[CPU_cap] * num_cpu + [SSD_cap] * num_ssd
-    # C = [CPU_cap, CPU_cap, SSD_cap, SSD_cap, SSD_cap, SSD_cap, SSD_cap, SSD_cap, SSD_cap, SSD_cap]  # 例如：第0和第1个分块容量较小
+    # C = [CPU_cap, CPU_cap, SSD_cap, SSD_cap, SSD_cap, SSD_cap, SSD_cap, SSD_cap, SSD_cap, SSD_cap]  
     # X = [CPU1_Hot, CPU2_Hot, A_SSD3_0_Hot, A_SSD3_0_Hot, A_SSD3_0_Hot, B_SSD4_0_Hot, B_SSD4_0_Hot, B_SSD4_0_Hot, B_SSD4_0_Hot, C_SSD1_0_Hot]
     X = hotness # [CPU1_Hot, CPU2_Hot, SSD_Hot, SSD_Hot, SSD_Hot, SSD_Hot, SSD_Hot, SSD_Hot, SSD_Hot, SSD_Hot]
     # capacities = [30, 20, 25, 15, 10]  # Make sure total is >= len(samples)

@@ -67,7 +67,8 @@ int32_t mmap_partition_read(std::string &partition_file, int32_t* partition_inde
     int64_t part_idx = 0;
     int32_t fd = open(partition_file.c_str(), O_RDONLY);
     if(fd == -1){
-        std::cout<<"cannout open file: "<<partition_file<<"\n";
+        return fd;
+        // std::cout<<"cannout open file: "<<partition_file<<"\n";
     }
     int64_t buf_len = lseek(fd, 0, SEEK_END);
     const int32_t* buf = (int32_t *)mmap(NULL, buf_len, PROT_READ, MAP_PRIVATE, fd, 0);

@@ -207,7 +207,7 @@ void StorageManagement::LoadFeature(BuildInfo* info){
             count++;
         }
     }
-    std::cout<<"count: "<<count<<" "<<"total: "<<sample_bin_ids.size()<<" "<<"ratio: "<< static_cast<double>(count) / sample_bin_ids.size()<<std::endl;
+    // std::cout<<"count: "<<count<<" "<<"total: "<<sample_bin_ids.size()<<" "<<"ratio: "<< static_cast<double>(count) / sample_bin_ids.size()<<std::endl;
 
     info->sample_bin_ids = sample_bin_ids;
     info->sample_orders = sample_orders;
@@ -218,7 +218,7 @@ void StorageManagement::LoadFeature(BuildInfo* info){
     std::cout<<"Finish Reading All Files\n";
     // partition nodes
 
-    std::cout<<"training_set_num: "<<training_set_num_<<"\n";
+    // std::cout<<"training_set_num: "<<training_set_num_<<"\n";
     int trainingset_count = 0;
     // std::cout<<"partition count "<<partition_count<<"\n";
     for(int32_t i = 0; i < training_set_num_; i+=1){
@@ -305,7 +305,7 @@ void StorageManagement::LoadFeature(BuildInfo* info){
     info->host_float_feature = host_float_feature;
     info->float_feature_len = float_feature_len_;
     info->total_num_nodes = node_num_;
-    std::cout<<"Finish Partition\n";
+    // std::cout<<"Finish Partition\n";
 }
 
 void StorageManagement::Initialze(int32_t shard_count){

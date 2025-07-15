@@ -57,10 +57,10 @@ def Run(args):
         valid_set_num = 100000
         test_set_num = 100000
     elif args.dataset_name == "igb":
-        path = args.dataset_path + "/igb/"
+        path = args.dataset_path + "/"
         vertices_num = 269346175
         edges_num = 3870892894
-        features_dim = 256
+        features_dim = 1024
         train_set_num = 2693461
         valid_set_num = 165
         test_set_num = 218
@@ -70,7 +70,7 @@ def Run(args):
     
 
     with open("meta_config","w") as file:
-        file.write("{} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} ".format(path, args.train_batch_size, vertices_num, edges_num, \
+        file.write("{} {} {} {} {} {} {} {} {} {} {} {} {} {} {} ".format(path, args.train_batch_size, vertices_num, edges_num, \
                                                 features_dim, train_set_num, valid_set_num, test_set_num, \
                                             0, args.epoch, 0, args.ssd_number, args.num_queues_per_ssd, 100, 100))
     
@@ -86,7 +86,7 @@ if __name__ == "__main__":
     argparser.add_argument('--fanout', type=list, default=[25, 10])
     argparser.add_argument('--gpu_number', type=int, default=2)
     argparser.add_argument('--epoch', type=int, default=2)
-    argparser.add_argument('--ssd_number', type=int, default=2)
+    argparser.add_argument('--ssd_number', type=int, default=6)
     argparser.add_argument('--num_queues_per_ssd', type=int, default=128)
 
     args = argparser.parse_args()

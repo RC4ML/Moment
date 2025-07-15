@@ -5,6 +5,9 @@
 #include <assert.h>
 #include <unistd.h>
 #include <iostream>
+#include <cstdio>
+#include <cstdlib>
+#include <fstream>
 
 // Configuration parameters (replace macros with variables)
 constexpr size_t TEST_SIZE = 0x10000000;         // Test data size, in bytes
@@ -93,5 +96,15 @@ int main(int argc, char** argv) {
     // Output performance results
     fprintf(stderr, "do_io_req takes %f ms\n", ms);
     fprintf(stderr, "%dB random read bandwidth: %f MiB/s\n", io_size, TEST_SIZE * repeat / (1024.0 * 1024.0) / (ms / 1000));
+    double read_bw_mib_s = TEST_SIZE * repeat
+                           / (1024.0 * 1024.0)
+                           / (ms / 1000.0);
+    std::ofstream ofs("bandwidth_results.txt", std::ios::out);
+    if (!ofs) {
+        std::fprintf(stderr, "Error: cannot open bandwidth_results.txt for writing\n");
+        return 0;
+    }
+    ofs << read_bw_mib_s/1000.0 << "\n";
+    ofs.close();
     return 0;
 }

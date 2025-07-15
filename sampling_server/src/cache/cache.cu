@@ -355,7 +355,7 @@ void UnifiedCache::Initialize(
         CacheController *cctl = NewPreSCCacheController(train_step, device_count_);
         cache_controller_[i] = cctl;
     }
-    std::cout << "Cache Controler Initialize\n";
+    // std::cout << "Cache Controler Initialize\n";
 
     if (float_feature_len > 0)
     {
@@ -413,7 +413,7 @@ void UnifiedCache::HybridInit(FeatureStorage *feature, GraphStorage *graph)
 
     cudaHostAlloc(&cpu_float_features_, int64_t(int64_t(cpu_cache_capacity_) * float_feature_len_ * sizeof(float)), cudaHostAllocMapped);
 
-    std::cout << "Start selecting cache candidates\n";
+    // std::cout << "Start selecting cache candidates\n";
     std::vector<unsigned long long int *> node_access_time;
     for (int32_t i = 0; i < device_count_; i++)
     {
@@ -444,8 +444,8 @@ void UnifiedCache::HybridInit(FeatureStorage *feature, GraphStorage *graph)
         return;
     }
 
-    std::cout << "Successfully wrote " << total_num_nodes
-            << " lines to " << dataset_path_.c_str() << '\n';
+    // std::cout << "Successfully wrote " << total_num_nodes
+    //         << " lines to " << dataset_path_.c_str() << '\n';
 
     std::free(h_node_access_time);
 
@@ -498,7 +498,7 @@ void UnifiedCache::HybridInit(FeatureStorage *feature, GraphStorage *graph)
         {
             float *new_float_feature_cache;
             cudaMalloc(&new_float_feature_cache, int64_t(int64_t(int64_t(gpu_cache_capacity_) * float_feature_len_) * sizeof(float)));
-            std::cout << "Allocate GPU Feature Cache" << gpu_cache_capacity_ << "\n";
+            // std::cout << "Allocate GPU Feature Cache" << gpu_cache_capacity_ << "\n";
             // FeatFillUp<<<128, 1024>>>(gpu_cache_capacity_, float_feature_len_, new_float_feature_cache, cpu_float_feature, QF_[i], Kg_, j);
             float_feature_cache_[i] = new_float_feature_cache;
             // init_feature_cache<<<1,1>>>(d_float_feature_cache_ptr_[i], new_float_feature_cache, i);          //j: device id in clique
@@ -509,7 +509,7 @@ void UnifiedCache::HybridInit(FeatureStorage *feature, GraphStorage *graph)
     cudaDeviceSynchronize();
     is_presc_ = false;
 
-    std::cout << "Finish load feature cache\n";
+    // std::cout << "Finish load feature cache\n";
 }
 
 int32_t UnifiedCache::NodeCapacity(int32_t dev_id)

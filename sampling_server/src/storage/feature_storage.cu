@@ -94,9 +94,9 @@ public:
         // printf("cudaDeviceid: %ld\n", info->cudaDeviceId);
         iostack_ = new IOStack(info->num_ssd, info->num_queues_per_ssd, info->partition_count);
         num_ssd_ = info->num_ssd;
-        std::cout<<"IOStack built\n";
+        // std::cout<<"IOStack built\n";
         iomerge_ = new IOMerge(32, 1024, 8, 512, 4000000, 1000000000, info->partition_count);
-        std::cout<<"IOMerge built\n";
+        // std::cout<<"IOMerge built\n";
  
         int32_t partition_count = info->partition_count;
         total_num_nodes_ = info->total_num_nodes;

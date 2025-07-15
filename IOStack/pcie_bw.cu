@@ -15,6 +15,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cassert>
+#include <fstream>
 
 void check(cudaError_t e, const char *msg)
 {
@@ -78,7 +79,15 @@ int main(int argc, char **argv)
 
     printf("Host→Device: %.2f GiB/s  |  Device→Host: %.2f GiB/s\n",
            gb_per_sec(totalBytes, ms_h2d), gb_per_sec(totalBytes, ms_d2h));
-
+    
+    std::ofstream ofs("bandwidth_results.txt", std::ios::app);
+    if (!ofs) {
+        std::fprintf(stderr, "Error: cannot open bandwidth_results.txt for writing\n");
+        return 0;
+    }
+    ofs << gb_per_sec(totalBytes, ms_h2d) << "\n";
+    ofs.close();
+    
     cudaFreeHost(h_buf);
     cudaFree(d_buf);
     return 0;
