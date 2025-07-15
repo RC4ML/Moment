@@ -83,12 +83,47 @@ There are two steps to train a GNN model in Moment. In these steps, you need to 
 ```
 $ sudo python3 automatic_module.py
 ```
+Customize dataset path, GNN feature dimension, number of GPUs, and number of SSDs in the automatic_module.py:
+```
+file_path = "/share/gnn_data/igb260m/IGB-Datasets/data/"  # Replace with your file path
+feature_dim = 1024
+num_gpu = 2
+num_ssd = 6
+```
+The automatic module will execute three main steps:
+#### 3.2.1 Get hardware and run profiling
+Output:
+<img width="347" height="444" alt="6fbc296ecc7eba6ff70cd95a2de75fe" src="https://github.com/user-attachments/assets/ba034c66-6503-4450-aafb-dd90ae14ebff" />
+
+#### 3.2.2 Solve maxflow and recommend the best hardware configuration setting
+Output:
+<img width="289" height="148" alt="a4c0ceeade58389e58c615a9c51f7a4" src="https://github.com/user-attachments/assets/1797729f-9270-4ff4-a43b-5bbef381c251" />
+
+#### 3.2.3 Run DDAk
+<img width="153" height="131" alt="c25aa938a37f4c9fbec6332db895f77" src="https://github.com/user-attachments/assets/ff048152-59cf-462f-b061-27e2d4204550" />
+
+
 ### 3.3 Start Moment Server
 Execute the following instruction:
 ```
 $ sudo python3 moment_server.py --dataset_name igb --train_batch_size 8000 --fanout [25,10] --epoch 2 
 ```
-You can customize your own dataset path.
+Customize the hyperparameters of the Moment server:
+```
+    argparser.add_argument('--dataset_path', type=str, default="/share/gnn_data/igb260m/IGB-Datasets/data")
+    argparser.add_argument('--dataset_name', type=str, default="igb")
+    argparser.add_argument('--train_batch_size', type=int, default=8000)
+    argparser.add_argument('--fanout', type=list, default=[25, 10])
+    argparser.add_argument('--gpu_number', type=int, default=2)
+    argparser.add_argument('--epoch', type=int, default=2)
+    argparser.add_argument('--ssd_number', type=int, default=6)
+    argparser.add_argument('--num_queues_per_ssd', type=int, default=128)
+```
+Note that the dataset_path should be the same as the automatic module.
+When the system outputs the following, start training in another session:
+<img width="158" height="15" alt="1752558735103" src="https://github.com/user-attachments/assets/bd002711-360b-4af8-9608-aa11cbb3f332" />
+
+
 
 ### 3.4 Run Moment Training
 #### (Optional) Configure SM Utilization of Training Backend:
@@ -106,7 +141,7 @@ $ echo quit | nvidia-cuda-mps-control   # Stop the MPS service
 ```
 After Moment outputs "System is ready for serving", then start training by: 
 ```
-$ sudo python3 training_backend/moment_graphsage.py --class_num 2  --features_num 128 --hidden_dim 256 --hops_num 2 --epoch 2
+$ sudo python3 training_backend/moment_graphsage.py --class_num 2  --features_num 1024 --hidden_dim 256 --epoch 2
 ```
 
 
